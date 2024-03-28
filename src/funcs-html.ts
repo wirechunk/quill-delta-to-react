@@ -3,14 +3,15 @@ interface ITagKeyValue {
   value?: string;
 }
 
-enum EncodeTarget {
+// Temporary export before this is moved to the test directory.
+export enum EncodeTarget {
   Html = 0,
   Url = 1,
 }
 
 function makeStartTag(
   tag: any,
-  attrs: ITagKeyValue | ITagKeyValue[] | undefined = undefined
+  attrs: ITagKeyValue | ITagKeyValue[] | undefined = undefined,
 ) {
   if (!tag) {
     return '';
@@ -41,20 +42,14 @@ function decodeHtml(str: string) {
   return encodeMappings(EncodeTarget.Html).reduce(decodeMapping, str);
 }
 
-function encodeHtml(str: string, preventDoubleEncoding = true) {
-  if (preventDoubleEncoding) {
-    str = decodeHtml(str);
-  }
-  return encodeMappings(EncodeTarget.Html).reduce(encodeMapping, str);
-}
-
 function encodeLink(str: string) {
   let linkMaps = encodeMappings(EncodeTarget.Url);
   let decoded = linkMaps.reduce(decodeMapping, str);
   return linkMaps.reduce(encodeMapping, decoded);
 }
 
-function encodeMappings(mtype: EncodeTarget) {
+// Temporary export before this is moved to the test directory.
+export function encodeMappings(mtype: EncodeTarget) {
   let maps = [
     ['&', '&amp;'],
     ['<', '&lt;'],
@@ -67,24 +62,20 @@ function encodeMappings(mtype: EncodeTarget) {
   ];
   if (mtype === EncodeTarget.Html) {
     return maps.filter(
-      ([v, _]) => v.indexOf('(') === -1 && v.indexOf(')') === -1
+      ([v, _]) => v.indexOf('(') === -1 && v.indexOf(')') === -1,
     );
   } else {
     // for url
     return maps.filter(([v, _]) => v.indexOf('/') === -1);
   }
 }
-function encodeMapping(str: string, mapping: string[]) {
+
+export function encodeMapping(str: string, mapping: string[]) {
   return str.replace(new RegExp(mapping[0], 'g'), mapping[1]);
 }
+
 function decodeMapping(str: string, mapping: string[]) {
   return str.replace(new RegExp(mapping[1], 'g'), mapping[0].replace('\\', ''));
 }
-export {
-  makeStartTag,
-  makeEndTag,
-  encodeHtml,
-  decodeHtml,
-  encodeLink,
-  ITagKeyValue,
-};
+
+export { makeStartTag, makeEndTag, decodeHtml, encodeLink, ITagKeyValue };

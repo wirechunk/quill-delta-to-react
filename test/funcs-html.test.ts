@@ -1,13 +1,11 @@
-import 'mocha';
-import * as assert from 'assert';
-
+import { strict as assert } from 'node:assert';
+import { describe, it } from 'node:test';
 import {
   makeEndTag,
   makeStartTag,
-  encodeHtml,
   decodeHtml,
   encodeLink,
-} from './../src/funcs-html';
+} from './../src/funcs-html.js';
 
 describe('html module', function () {
   describe('makeStartTag()', function () {
@@ -45,26 +43,10 @@ describe('html module', function () {
     });
   });
 
-  describe('encodeHtml()', function () {
-    it('should encode < > & " \' / characters', function () {
-      var act = encodeHtml('hello"my<lovely\'/>&amp;friend&here()', false);
-      assert.equal(
-        act,
-        'hello&quot;my&lt;lovely&#x27;&#x2F;&gt;&amp;amp;friend&amp;here()'
-      );
-
-      var act = encodeHtml('hello"my<lovely\'/>&amp;friend&here()');
-      assert.equal(
-        act,
-        'hello&quot;my&lt;lovely&#x27;&#x2F;&gt;&amp;friend&amp;here()'
-      );
-    });
-  });
-
   describe('decodeHtml()', function () {
     it('should decode html', function () {
       var act = decodeHtml(
-        'hello&quot;my&lt;lovely&#x27;&#x2F;&gt;&amp;friend&amp;here'
+        'hello&quot;my&lt;lovely&#x27;&#x2F;&gt;&amp;friend&amp;here',
       );
       assert.equal(act, 'hello"my<lovely\'/>&friend&here');
     });
@@ -75,7 +57,7 @@ describe('html module', function () {
       var act = encodeLink('http://www.yahoo.com/?a=b&c=<>()"\'');
       assert.equal(
         act,
-        'http://www.yahoo.com/?a=b&amp;c=&lt;&gt;&#40;&#41;&quot;&#x27;'
+        'http://www.yahoo.com/?a=b&amp;c=&lt;&gt;&#40;&#41;&quot;&#x27;',
       );
     });
   });

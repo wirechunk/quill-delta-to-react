@@ -1,15 +1,15 @@
-import 'mocha';
-import * as assert from 'assert';
+import { describe, it } from 'node:test';
+import { strict as assert } from 'node:assert';
 
-import { DeltaInsertOp } from '../../src/DeltaInsertOp';
-import { Grouper } from '../../src/grouper/Grouper';
-import { TableGrouper } from '../../src/grouper/TableGrouper';
+import { DeltaInsertOp } from '../../src/DeltaInsertOp.js';
+import { Grouper } from '../../src/grouper/Grouper.js';
+import { TableGrouper } from '../../src/grouper/TableGrouper.js';
 import {
   TableGroup,
   TableRow,
   TableCell,
   BlockGroup,
-} from '../../src/grouper/group-types';
+} from '../../src/grouper/group-types.js';
 
 describe('TableGrouper', function () {
   describe('empty table', function () {

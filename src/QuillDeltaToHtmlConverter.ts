@@ -1,29 +1,36 @@
-import { InsertOpsConverter } from './InsertOpsConverter';
 import {
-  OpToHtmlConverter,
-  IOpToHtmlConverterOptions,
   IInlineStyles,
-} from './OpToHtmlConverter';
-import { DeltaInsertOp } from './DeltaInsertOp';
-import { Grouper } from './grouper/Grouper';
+  IOpToHtmlConverterOptions,
+  OpToHtmlConverter,
+} from './OpToHtmlConverter.js';
 import {
-  VideoItem,
-  InlineGroup,
+  DeltaInsertOp,
+  DeltaInsertOpType,
+  isDeltaInsertOp,
+} from './DeltaInsertOp.js';
+import { Grouper } from './grouper/Grouper.js';
+import {
   BlockGroup,
+  BlotBlock,
+  InlineGroup,
   ListGroup,
   ListItem,
-  TDataGroup,
-  BlotBlock,
+  TableCell,
   TableGroup,
   TableRow,
-  TableCell,
-} from './grouper/group-types';
-import { ListNester } from './grouper/ListNester';
-import { makeStartTag, makeEndTag, encodeHtml } from './funcs-html';
-import * as obj from './helpers/object';
-import { GroupType } from './value-types';
-import { IOpAttributeSanitizerOptions } from './OpAttributeSanitizer';
-import { TableGrouper } from './grouper/TableGrouper';
+  TDataGroup,
+  VideoItem,
+} from './grouper/group-types.js';
+import { nestLists } from './grouper/nestLists.js';
+import { makeEndTag, makeStartTag } from './funcs-html.js';
+import { GroupType } from './value-types.js';
+import {
+  IOpAttributeSanitizerOptions,
+  OpAttributeSanitizer,
+} from './OpAttributeSanitizer.js';
+import { TableGrouper } from './grouper/TableGrouper.js';
+import { denormalizeInsertOp } from './denormalizeInsertOp.js';
+import { convertInsertVal } from './convertInsertVal.js';
 
 interface IQuillDeltaToHtmlConverterOptions
   extends IOpAttributeSanitizerOptions,
@@ -41,35 +48,30 @@ interface IQuillDeltaToHtmlConverterOptions
 const BrTag = '<br/>';
 
 class QuillDeltaToHtmlConverter {
-  private options: IQuillDeltaToHtmlConverterOptions;
-  private rawDeltaOps: any[] = [];
-  private converterOptions: IOpToHtmlConverterOptions;
+  private readonly options: IQuillDeltaToHtmlConverterOptions;
+  private readonly rawDeltaOps: DeltaInsertOpType[] = [];
+  private readonly converterOptions: IOpToHtmlConverterOptions;
 
   // render callbacks
   private callbacks: any = {};
 
   constructor(deltaOps: any[], options?: IQuillDeltaToHtmlConverterOptions) {
-    this.options = obj.assign(
-      {
-        paragraphTag: 'p',
-        encodeHtml: true,
-        classPrefix: 'ql',
-        inlineStyles: false,
-        multiLineBlockquote: true,
-        multiLineHeader: true,
-        multiLineCodeblock: true,
-        multiLineParagraph: true,
-        multiLineCustomBlock: true,
-        allowBackgroundClasses: false,
-        linkTarget: '_blank',
-      },
-      options,
-      {
-        orderedListTag: 'ol',
-        bulletListTag: 'ul',
-        listItemTag: 'li',
-      }
-    );
+    this.options = {
+      paragraphTag: 'p',
+      classPrefix: 'ql',
+      inlineStyles: false,
+      multiLineBlockquote: true,
+      multiLineHeader: true,
+      multiLineCodeblock: true,
+      multiLineParagraph: true,
+      multiLineCustomBlock: true,
+      allowBackgroundClasses: false,
+      linkTarget: '_blank',
+      ...options,
+      orderedListTag: 'ol',
+      bulletListTag: 'ul',
+      listItemTag: 'li',
+    };
 
     var inlineStyles: IInlineStyles | undefined;
     if (!this.options.inlineStyles) {
@@ -81,7 +83,6 @@ class QuillDeltaToHtmlConverter {
     }
 
     this.converterOptions = {
-      encodeHtml: this.options.encodeHtml,
       classPrefix: this.options.classPrefix,
       inlineStyles: inlineStyles,
       listItemTag: this.options.listItemTag,
@@ -101,72 +102,110 @@ class QuillDeltaToHtmlConverter {
     return op.isOrderedList()
       ? this.options.orderedListTag + ''
       : op.isBulletList()
-      ? this.options.bulletListTag + ''
-      : op.isCheckedList()
-      ? this.options.bulletListTag + ''
-      : op.isUncheckedList()
-      ? this.options.bulletListTag + ''
-      : '';
+        ? this.options.bulletListTag + ''
+        : op.isCheckedList()
+          ? this.options.bulletListTag + ''
+          : op.isUncheckedList()
+            ? this.options.bulletListTag + ''
+            : '';
   }
 
   getGroupedOps(): TDataGroup[] {
-    var deltaOps = InsertOpsConverter.convert(this.rawDeltaOps, this.options);
+    const deltaOps: DeltaInsertOp[] = [];
+    for (const unknownOp of this.rawDeltaOps) {
+      if (isDeltaInsertOp(unknownOp)) {
+        const denormalizedOps = denormalizeInsertOp(unknownOp);
+        for (const { insert, attributes } of denormalizedOps) {
+          const insertVal = convertInsertVal(insert, this.options);
+          if (insertVal) {
+            deltaOps.push(
+              new DeltaInsertOp(
+                insertVal,
+                attributes
+                  ? OpAttributeSanitizer.sanitize(attributes, this.options)
+                  : undefined,
+              ),
+            );
+          }
+        }
+      }
+    }
 
-    var pairedOps = Grouper.pairOpsWithTheirBlock(deltaOps);
-
-    var groupedSameStyleBlocks = Grouper.groupConsecutiveSameStyleBlocks(
-      pairedOps,
+    const groupedSameStyleBlocks = Grouper.groupConsecutiveSameStyleBlocks(
+      Grouper.pairOpsWithTheirBlock(deltaOps),
       {
         blockquotes: !!this.options.multiLineBlockquote,
         header: !!this.options.multiLineHeader,
         codeBlocks: !!this.options.multiLineCodeblock,
         customBlocks: !!this.options.multiLineCustomBlock,
+      },
+    );
+
+    // Move all ops of same style consecutive blocks to the ops of first block and discard the rest.
+    let groupedOps = groupedSameStyleBlocks.map((elm) => {
+      if (Array.isArray(elm)) {
+        const groupsLastInd = elm.length - 1;
+        return new BlockGroup(
+          elm[0].op,
+          elm.flatMap((g, i) => {
+            if (!g.ops.length) {
+              return [DeltaInsertOp.createNewLineOp()];
+            }
+            return g.ops.concat(
+              i < groupsLastInd ? [DeltaInsertOp.createNewLineOp()] : [],
+            );
+          }),
+        );
       }
-    );
+      if (elm instanceof BlockGroup && !elm.ops.length) {
+        elm.ops.push(DeltaInsertOp.createNewLineOp());
+      }
+      return elm;
+    });
 
-    var groupedOps = Grouper.reduceConsecutiveSameStyleBlocksToOne(
-      groupedSameStyleBlocks
-    );
-
-    var tableGrouper = new TableGrouper();
+    const tableGrouper = new TableGrouper();
     groupedOps = tableGrouper.group(groupedOps);
 
-    var listNester = new ListNester();
-    return listNester.nest(groupedOps);
+    return nestLists(groupedOps);
   }
 
   convert() {
-    let groups = this.getGroupedOps();
-    return groups
+    return this.getGroupedOps()
       .map((group) => {
         if (group instanceof ListGroup) {
           return this._renderWithCallbacks(GroupType.List, group, () =>
-            this._renderList(<ListGroup>group)
+            this.renderList(<ListGroup>group),
           );
-        } else if (group instanceof TableGroup) {
+        }
+        if (group instanceof TableGroup) {
           return this._renderWithCallbacks(GroupType.Table, group, () =>
-            this._renderTable(<TableGroup>group)
+            this._renderTable(<TableGroup>group),
           );
-        } else if (group instanceof BlockGroup) {
-          var g = <BlockGroup>group;
+        }
+        if (group instanceof BlockGroup) {
+          const g = <BlockGroup>group;
 
           return this._renderWithCallbacks(GroupType.Block, group, () =>
-            this._renderBlock(g.op, g.ops)
+            this._renderBlock(g.op, g.ops),
           );
-        } else if (group instanceof BlotBlock) {
+        }
+        if (group instanceof BlotBlock) {
           return this._renderCustom(group.op, null);
-        } else if (group instanceof VideoItem) {
+        }
+        if (group instanceof VideoItem) {
           return this._renderWithCallbacks(GroupType.Video, group, () => {
-            var g = <VideoItem>group;
-            var converter = new OpToHtmlConverter(g.op, this.converterOptions);
+            const g = group as VideoItem;
+            const converter = new OpToHtmlConverter(
+              g.op,
+              this.converterOptions,
+            );
             return converter.getHtml();
           });
-        } else {
-          // InlineGroup
-          return this._renderWithCallbacks(GroupType.InlineGroup, group, () => {
-            return this._renderInlines((<InlineGroup>group).ops, true);
-          });
         }
+        // InlineGroup
+        return this._renderWithCallbacks(GroupType.InlineGroup, group, () => {
+          return this._renderInlines((group as InlineGroup).ops, true);
+        });
       })
       .join('');
   }
@@ -174,7 +213,7 @@ class QuillDeltaToHtmlConverter {
   _renderWithCallbacks(
     groupType: GroupType,
     group: TDataGroup,
-    myRenderFn: () => string
+    myRenderFn: () => string,
   ) {
     var html = '';
     var beforeCb = this.callbacks['beforeRender_cb'];
@@ -196,26 +235,24 @@ class QuillDeltaToHtmlConverter {
     return html;
   }
 
-  _renderList(list: ListGroup): string {
+  renderList(list: ListGroup): string {
     var firstItem = list.items[0];
     return (
       makeStartTag(this._getListTag(firstItem.item.op)) +
-      list.items.map((li: ListItem) => this._renderListItem(li)).join('') +
+      list.items.map((li: ListItem) => this.renderListItem(li)).join('') +
       makeEndTag(this._getListTag(firstItem.item.op))
     );
   }
 
-  _renderListItem(li: ListItem): string {
-    //if (!isOuterMost) {
+  renderListItem(li: ListItem): string {
     li.item.op.attributes.indent = 0;
-    //}
     var converter = new OpToHtmlConverter(li.item.op, this.converterOptions);
     var parts = converter.getHtmlParts();
     var liElementsHtml = this._renderInlines(li.item.ops, false);
     return (
       parts.openingTag +
       liElementsHtml +
-      (li.innerList ? this._renderList(li.innerList) : '') +
+      (li.innerList ? this.renderList(li.innerList) : '') +
       parts.closingTag
     );
   }
@@ -261,15 +298,13 @@ class QuillDeltaToHtmlConverter {
     if (bop.isCodeBlock()) {
       return (
         htmlParts.openingTag +
-        encodeHtml(
-          ops
-            .map((iop) =>
-              iop.isCustomEmbed()
-                ? this._renderCustom(iop, bop)
-                : iop.insert.value
-            )
-            .join('')
-        ) +
+        ops
+          .map((iop) =>
+            iop.isCustomEmbed()
+              ? this._renderCustom(iop, bop)
+              : iop.insert.value,
+          )
+          .join('') +
         htmlParts.closingTag
       );
     }
@@ -301,9 +336,7 @@ class QuillDeltaToHtmlConverter {
       startParaTag +
       html
         .split(BrTag)
-        .map((v) => {
-          return v === '' ? BrTag : v;
-        })
+        .map((v) => v || BrTag)
         .join(endParaTag + startParaTag) +
       endParaTag
     );
@@ -326,19 +359,15 @@ class QuillDeltaToHtmlConverter {
   }
 
   beforeRender(cb: (group: GroupType, data: TDataGroup) => string) {
-    if (typeof cb === 'function') {
-      this.callbacks['beforeRender_cb'] = cb;
-    }
+    this.callbacks['beforeRender_cb'] = cb;
   }
 
   afterRender(cb: (group: GroupType, html: string) => string) {
-    if (typeof cb === 'function') {
-      this.callbacks['afterRender_cb'] = cb;
-    }
+    this.callbacks['afterRender_cb'] = cb;
   }
 
   renderCustomWith(
-    cb: (op: DeltaInsertOp, contextOp: DeltaInsertOp) => string
+    cb: (op: DeltaInsertOp, contextOp: DeltaInsertOp) => string,
   ) {
     this.callbacks['renderCustomOp_cb'] = cb;
   }

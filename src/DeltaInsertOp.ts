@@ -1,22 +1,44 @@
-import { NewLine, ListType, DataType } from './value-types';
-import { IOpAttributes } from './OpAttributeSanitizer';
-import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData';
+import { newLine, ListType, DataType } from './value-types.js';
+import { IOpAttributes } from './OpAttributeSanitizer.js';
+import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import isEqual from 'lodash.isequal';
 
-class DeltaInsertOp {
+const isNonNullObject = (obj: unknown): obj is Record<string, unknown> =>
+  !!obj && typeof obj === 'object';
+
+export type DeltaInsertOpType = {
+  insert: string | Record<string, unknown>;
+  attributes?: IOpAttributes | null;
+};
+
+export const isDeltaInsertOp = (op: unknown): op is DeltaInsertOpType => {
+  return (
+    !!op &&
+    typeof op === 'object' &&
+    (typeof (op as DeltaInsertOpType).insert === 'string' ||
+      isNonNullObject((op as DeltaInsertOpType).insert)) &&
+    (!(op as DeltaInsertOpType).attributes ||
+      typeof (op as DeltaInsertOpType).attributes === 'object')
+  );
+};
+
+export class DeltaInsertOp {
   readonly insert: InsertData;
   readonly attributes: IOpAttributes;
 
-  constructor(insertVal: InsertData | string, attrs?: IOpAttributes) {
+  constructor(
+    insertVal: InsertData | string,
+    attrs?: IOpAttributes | undefined,
+  ) {
     if (typeof insertVal === 'string') {
-      insertVal = new InsertDataQuill(DataType.Text, insertVal + '');
+      insertVal = new InsertDataQuill(DataType.Text, insertVal);
     }
     this.insert = insertVal;
     this.attributes = attrs || {};
   }
 
   static createNewLineOp() {
-    return new DeltaInsertOp(NewLine);
+    return new DeltaInsertOp(newLine);
   }
 
   isContainerBlock() {
@@ -69,13 +91,6 @@ class DeltaInsertOp {
     return isEqual(this.attributes, op.attributes);
   }
 
-  hasHigherIndentThan(op: DeltaInsertOp) {
-    return (
-      (Number(this.attributes.indent) || 0) >
-      (Number(op.attributes.indent) || 0)
-    );
-  }
-
   isInline() {
     return !(
       this.isContainerBlock() ||
@@ -93,7 +108,7 @@ class DeltaInsertOp {
   }
 
   isJustNewline() {
-    return this.insert.value === NewLine;
+    return this.insert.value === newLine;
   }
 
   isList() {
@@ -138,7 +153,7 @@ class DeltaInsertOp {
 
   isSameTableRowAs(op: DeltaInsertOp): boolean {
     return (
-      !!op.isTable() &&
+      op.isTable() &&
       this.isTable() &&
       this.attributes.table === op.attributes.table
     );
@@ -180,5 +195,3 @@ class DeltaInsertOp {
     return this.isText() && !!this.attributes.mentions;
   }
 }
-
-export { DeltaInsertOp };

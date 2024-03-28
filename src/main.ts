@@ -1,6 +1,5 @@
-// main entry file for node
-export { QuillDeltaToHtmlConverter } from './QuillDeltaToHtmlConverter';
-export { OpToHtmlConverter } from './OpToHtmlConverter';
+export { QuillDeltaToHtmlConverter } from './QuillDeltaToHtmlConverter.js';
+export { OpToHtmlConverter } from './OpToHtmlConverter.js';
 export {
   InlineGroup,
   VideoItem,
@@ -8,15 +7,15 @@ export {
   ListGroup,
   ListItem,
   BlotBlock,
-} from './grouper/group-types';
-export { DeltaInsertOp } from './DeltaInsertOp';
-export { InsertDataQuill, InsertDataCustom } from './InsertData';
+} from './grouper/group-types.js';
+export { DeltaInsertOp } from './DeltaInsertOp.js';
+export { InsertDataQuill, InsertDataCustom } from './InsertData.js';
 export {
-  NewLine,
+  newLine,
   ListType,
   ScriptType,
   DirectionType,
   AlignType,
   DataType,
   GroupType,
-} from './value-types';
+} from './value-types.js';

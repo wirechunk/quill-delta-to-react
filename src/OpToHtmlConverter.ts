@@ -1,15 +1,9 @@
-import {
-  makeStartTag,
-  makeEndTag,
-  encodeHtml,
-  ITagKeyValue,
-} from './funcs-html';
-import { DeltaInsertOp } from './DeltaInsertOp';
-import { ScriptType, NewLine } from './value-types';
-import * as obj from './helpers/object';
-import { IMention } from './mentions/MentionSanitizer';
-import * as arr from './helpers/array';
-import { OpAttributeSanitizer } from './OpAttributeSanitizer';
+import { ITagKeyValue, makeEndTag, makeStartTag } from './funcs-html.js';
+import { DeltaInsertOp } from './DeltaInsertOp.js';
+import { newLine, ScriptType } from './value-types.js';
+import { IMention } from './mentions/MentionSanitizer.js';
+import * as arr from './helpers/array.js';
+import { OpAttributeSanitizer } from './OpAttributeSanitizer.js';
 
 export type InlineStyleType =
   | ((value: string, op: DeltaInsertOp) => string | undefined)
@@ -54,7 +48,6 @@ export const DEFAULT_INLINE_STYLES: IInlineStyles = {
 interface IOpToHtmlConverterOptions {
   classPrefix?: string;
   inlineStyles?: boolean | IInlineStyles;
-  encodeHtml?: boolean;
   listItemTag?: string;
   paragraphTag?: string;
   linkRel?: string;
@@ -74,49 +67,45 @@ interface IHtmlParts {
 
 class OpToHtmlConverter {
   private options: IOpToHtmlConverterOptions;
-  private op: DeltaInsertOp;
+  private readonly op: DeltaInsertOp;
 
   constructor(op: DeltaInsertOp, options?: IOpToHtmlConverterOptions) {
     this.op = op;
-    this.options = obj.assign(
-      {},
-      {
-        classPrefix: 'ql',
-        inlineStyles: undefined,
-        encodeHtml: true,
-        listItemTag: 'li',
-        paragraphTag: 'p',
-      },
-      options
-    );
+    this.options = {
+      classPrefix: 'ql',
+      inlineStyles: undefined,
+      listItemTag: 'li',
+      paragraphTag: 'p',
+      ...options,
+    };
   }
 
   prefixClass(className: string): string {
     if (!this.options.classPrefix) {
-      return className + '';
+      return className;
     }
     return this.options.classPrefix + '-' + className;
   }
 
   getHtml(): string {
-    var parts = this.getHtmlParts();
+    const parts = this.getHtmlParts();
     return parts.openingTag + parts.content + parts.closingTag;
   }
 
   getHtmlParts(): IHtmlParts {
     if (this.op.isJustNewline() && !this.op.isContainerBlock()) {
-      return { openingTag: '', closingTag: '', content: NewLine };
+      return { openingTag: '', closingTag: '', content: newLine };
     }
 
-    let tags = this.getTags(),
-      attrs = this.getTagAttributes();
+    const tags = this.getTags();
+    let attrs = this.getTagAttributes();
 
     if (!tags.length && attrs.length) {
       tags.push('span');
     }
 
-    let beginTags = [],
-      endTags = [];
+    let beginTags = [];
+    let endTags = [];
     const imgTag = 'img';
     const isImageLink = (tag: any) =>
       tag === imgTag && !!this.op.attributes.link;
@@ -150,10 +139,7 @@ class OpToHtmlConverter {
       return this.op.insert.value;
     }
 
-    var content =
-      this.op.isFormula() || this.op.isText() ? this.op.insert.value : '';
-
-    return (this.options.encodeHtml && encodeHtml(content)) || content;
+    return this.op.isFormula() || this.op.isText() ? this.op.insert.value : '';
   }
 
   getCssClasses(): string[] {
@@ -175,13 +161,13 @@ class OpToHtmlConverter {
         .filter((prop) =>
           prop === 'background'
             ? OpAttributeSanitizer.IsValidColorLiteral(attrs[prop])
-            : true
+            : true,
         )
         .map((prop) => prop + '-' + attrs[prop])
         .concat(this.op.isFormula() ? 'formula' : [])
         .concat(this.op.isVideo() ? 'video' : [])
         .concat(this.op.isImage() ? 'image' : [])
-        .map(<Str2StrType>this.prefixClass.bind(this))
+        .map(<Str2StrType>this.prefixClass.bind(this)),
     );
   }
 
@@ -220,13 +206,13 @@ class OpToHtmlConverter {
             } else if (typeof attributeConverter === 'function') {
               var converterFn = attributeConverter as (
                 value: string,
-                op: DeltaInsertOp
+                op: DeltaInsertOp,
               ) => string;
               return converterFn(attrValue, this.op);
             } else {
               return arr.preferSecond(item) + ':' + attrValue;
             }
-          })
+          }),
       )
       .filter((item: any) => item !== undefined);
   }
@@ -239,8 +225,8 @@ class OpToHtmlConverter {
     const makeAttr = this.makeAttr.bind(this);
     const customTagAttributes = this.getCustomTagAttributes();
     const customAttr = customTagAttributes
-      ? Object.keys(this.getCustomTagAttributes()).map((k) =>
-          makeAttr(k, customTagAttributes[k])
+      ? Object.keys(customTagAttributes).map((k) =>
+          makeAttr(k, customTagAttributes[k]),
         )
       : [];
     var classes = this.getCssClasses();
@@ -251,14 +237,14 @@ class OpToHtmlConverter {
     if (this.op.isImage()) {
       this.op.attributes.width &&
         (tagAttrs = tagAttrs.concat(
-          makeAttr('width', this.op.attributes.width)
+          makeAttr('width', this.op.attributes.width),
         ));
       return tagAttrs.concat(makeAttr('src', this.op.insert.value));
     }
 
     if (this.op.isACheckList()) {
       return tagAttrs.concat(
-        makeAttr('data-checked', this.op.isCheckedList() ? 'true' : 'false')
+        makeAttr('data-checked', this.op.isCheckedList() ? 'true' : 'false'),
       );
     }
 
@@ -270,7 +256,7 @@ class OpToHtmlConverter {
       return tagAttrs.concat(
         makeAttr('frameborder', '0'),
         makeAttr('allowfullscreen', 'true'),
-        makeAttr('src', this.op.insert.value)
+        makeAttr('src', this.op.insert.value),
       );
     }
 
@@ -281,7 +267,7 @@ class OpToHtmlConverter {
       }
       if (mention['end-point'] && mention.slug) {
         tagAttrs = tagAttrs.concat(
-          makeAttr('href', mention['end-point'] + '/' + mention.slug)
+          makeAttr('href', mention['end-point'] + '/' + mention.slug),
         );
       } else {
         tagAttrs = tagAttrs.concat(makeAttr('href', 'about:blank'));
@@ -302,7 +288,7 @@ class OpToHtmlConverter {
       typeof this.op.attributes['code-block'] === 'string'
     ) {
       return tagAttrs.concat(
-        makeAttr('data-language', this.op.attributes['code-block'])
+        makeAttr('data-language', this.op.attributes['code-block']),
       );
     }
 
@@ -321,11 +307,9 @@ class OpToHtmlConverter {
     return { key: k, value: v };
   }
 
-  getLinkAttrs(): Array<ITagKeyValue> {
-    let tagAttrs: ITagKeyValue[] = [];
-
+  getLinkAttrs(): ITagKeyValue[] {
     let targetForAll = OpAttributeSanitizer.isValidTarget(
-      this.options.linkTarget || ''
+      this.options.linkTarget || '',
     )
       ? this.options.linkTarget
       : undefined;
@@ -336,8 +320,7 @@ class OpToHtmlConverter {
     let target = this.op.attributes.target || targetForAll;
     let rel = this.op.attributes.rel || relForAll;
 
-    return tagAttrs
-      .concat(this.makeAttr('href', this.op.attributes.link!))
+    return [this.makeAttr('href', this.op.attributes.link!)]
       .concat(target ? this.makeAttr('target', target) : [])
       .concat(rel ? this.makeAttr('rel', rel) : []);
   }
@@ -413,8 +396,8 @@ class OpToHtmlConverter {
         return customTag
           ? [customTag]
           : firstItem === 'header'
-          ? ['h' + attrs[firstItem]]
-          : [arr.preferSecond(item)!];
+            ? ['h' + attrs[firstItem]]
+            : [arr.preferSecond(item)!];
       }
     }
 
@@ -452,10 +435,10 @@ class OpToHtmlConverter {
       return customTagsMap[item[0]]
         ? customTagsMap[item[0]]
         : item[0] === 'script'
-        ? attrs[item[0]] === ScriptType.Sub
-          ? 'sub'
-          : 'sup'
-        : arr.preferSecond(item)!;
+          ? attrs[item[0]] === ScriptType.Sub
+            ? 'sub'
+            : 'sup'
+          : arr.preferSecond(item)!;
     });
   }
 }

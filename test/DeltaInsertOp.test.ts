@@ -1,9 +1,13 @@
-import 'mocha';
-import * as assert from 'assert';
+import { describe, it } from 'node:test';
+import { strict as assert } from 'node:assert';
 
-import { InsertDataQuill } from './../src/InsertData';
-import { DeltaInsertOp } from './../src/DeltaInsertOp';
-import { DataType, AlignType, ListType } from './../src/value-types';
+import { InsertDataQuill } from '../src/InsertData.js';
+import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
+import { DataType, AlignType, ListType } from '../src/value-types.js';
+
+describe('isDeltaInsertOp', () => {
+  // TODO
+});
 
 describe('DeltaInsertOp', function () {
   describe('constructor()', function () {
@@ -41,15 +45,6 @@ describe('DeltaInsertOp', function () {
 
       var op2 = new DeltaInsertOp('\n', { align: AlignType.Right, indent: 3 });
       assert.ok(!op1.hasSameAdiAs(op2));
-    });
-  });
-
-  describe('hasHigherIndentThan()', function () {
-    it('should successfully if two ops have same align indent and direction', function () {
-      var op1 = new DeltaInsertOp('\n', { indent: undefined });
-      var op2 = new DeltaInsertOp('\n', { indent: undefined });
-
-      assert.ok(!op1.hasHigherIndentThan(op2));
     });
   });
 

@@ -1,6 +1,6 @@
-import { DataType } from './value-types';
+import type { DataType } from './value-types.js';
 
-class InsertDataQuill {
+export class InsertDataQuill {
   readonly type: DataType;
   readonly value: string;
   constructor(type: DataType, value: string) {
@@ -9,7 +9,7 @@ class InsertDataQuill {
   }
 }
 
-class InsertDataCustom {
+export class InsertDataCustom {
   readonly type: string;
   readonly value: any;
   constructor(type: string, value: any) {
@@ -18,6 +18,4 @@ class InsertDataCustom {
   }
 }
 
-type InsertData = InsertDataCustom | InsertDataQuill;
-
-export { InsertData, InsertDataCustom, InsertDataQuill };
+export type InsertData = InsertDataCustom | InsertDataQuill;

@@ -1,17 +1,8 @@
-[![Build Status](https://travis-ci.org/nozer/quill-delta-to-html.svg?branch=master)](https://travis-ci.org/nozer/quill-delta-to-html) 
-[![Coverage Status](https://coveralls.io/repos/github/nozer/quill-delta-to-html/badge.svg?branch=master)](https://coveralls.io/github/nozer/quill-delta-to-html?branch=master)
+# Render Quill's Delta ops in React
 
-
-# Quill Delta to HTML Converter #
 Converts [Quill's](https://quilljs.com) [Delta](https://quilljs.com/docs/delta/) format to HTML (insert ops only) with properly nested lists.
 
-You can try a live demo of the conversion by opening the `demo-browser.html` file after cloning the repo.
-
-## Breaking change: `import/require` has changed as of `v0.10.0`. See Usage below ##
-
-
-
-## Quickstart ## 
+## Quickstart
 
 Installation
 ```
@@ -44,7 +35,6 @@ var html = converter.convert();
 |Option | Type | Default | Description 
 |---|---|---|---|
 |`paragraphTag`| string |  'p' | Custom tag to wrap inline html elements|
-|`encodeHtml`| boolean | true | If true, `<, >, /, ', ", &` characters in content will be encoded.|
 |`classPrefix`| string | 'ql' | A css class name to prefix class generating styles such as `size`, `font`, etc. |
 |`inlineStyles`| boolean or object | false | If true or an object, use inline styles instead of classes. See Rendering Inline Styles section below for using an object |
 |`multiLineBlockquote`| boolean | true | Instead of rendering multiple `blockquote` elements for quotes that are consecutive and have same styles(`align`, `indent`, and `direction`), it renders them into only one|

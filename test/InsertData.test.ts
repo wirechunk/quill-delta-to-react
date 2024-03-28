@@ -1,8 +1,8 @@
-import 'mocha';
-import * as assert from 'assert';
+import { describe, it } from 'node:test';
+import { strict as assert } from 'node:assert';
 
-import { InsertDataQuill, InsertDataCustom } from './../src/InsertData';
-import { DataType } from './../src/value-types';
+import { InsertDataQuill, InsertDataCustom } from './../src/InsertData.js';
+import { DataType } from './../src/value-types.js';
 
 describe('InsertData', function () {
   describe('InsertDataQuill', function () {

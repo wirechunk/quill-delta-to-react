@@ -1,17 +1,17 @@
+import { strict as assert } from 'node:assert';
+import { describe, it } from 'node:test';
 import {
   OpToHtmlConverter,
   IOpToHtmlConverterOptions,
-} from './../src/OpToHtmlConverter';
-import { DeltaInsertOp } from './../src/DeltaInsertOp';
-import { InsertDataQuill } from './../src/InsertData';
+} from '../src/OpToHtmlConverter.js';
+import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
+import { InsertDataQuill } from '../src/InsertData.js';
 import {
   ScriptType,
   DirectionType,
   AlignType,
   DataType,
-} from './../src/value-types';
-
-let assert = require('assert');
+} from '../src/value-types.js';
 
 describe('OpToHtmlConverter', function () {
   describe('constructor()', function () {
@@ -272,11 +272,13 @@ describe('OpToHtmlConverter', function () {
       c = new OpToHtmlConverter(o);
       assert.deepEqual(c.getTags(), ['code']);
 
-      [
-        ['image', 'img'],
-        ['video', 'iframe'],
-        ['formula', 'span'],
-      ].forEach((item: DataType[]) => {
+      (
+        [
+          [DataType.Image, 'img'],
+          [DataType.Video, 'iframe'],
+          [DataType.Formula, 'span'],
+        ] as const
+      ).forEach((item) => {
         o = new DeltaInsertOp(new InsertDataQuill(item[0], ''));
         c = new OpToHtmlConverter(o);
         assert.deepEqual(c.getTags(), [item[1]]);
@@ -447,7 +449,7 @@ describe('OpToHtmlConverter', function () {
 
       o = new DeltaInsertOp('sss<&>,', { bold: true });
       c = new OpToHtmlConverter(o);
-      assert.equal(c.getContent(), 'sss&lt;&amp;&gt;,');
+      assert.equal(c.getContent(), 'sss<&>,');
 
       o = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, 'ff'), {
         bold: true,
@@ -507,7 +509,7 @@ describe('OpToHtmlConverter', function () {
         assert.equal(act, result);
 
         var op = new DeltaInsertOp('\n', { bold: true });
-        c1 = new OpToHtmlConverter(op, { encodeHtml: false });
+        c1 = new OpToHtmlConverter(op);
         assert.equal(c1.getHtml(), '\n');
 
         var op = new DeltaInsertOp('\n', { color: '#fff' });
@@ -519,7 +521,7 @@ describe('OpToHtmlConverter', function () {
         assert.equal(c1.getHtml(), '<pre data-language="javascript"></pre>');
 
         var op = new DeltaInsertOp(
-          new InsertDataQuill(DataType.Image, 'http://')
+          new InsertDataQuill(DataType.Image, 'http://'),
         );
         c1 = new OpToHtmlConverter(op, {
           customCssClasses: (_) => {
@@ -528,7 +530,7 @@ describe('OpToHtmlConverter', function () {
         });
         assert.equal(
           c1.getHtml(),
-          '<img class="ql-custom ql-image" src="http://"/>'
+          '<img class="ql-custom ql-image" src="http://"/>',
         );
       });
     });

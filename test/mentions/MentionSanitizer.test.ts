@@ -1,10 +1,10 @@
-import 'mocha';
-import * as assert from 'assert';
+import { describe, it } from 'node:test';
+import { strict as assert } from 'node:assert';
 
-import { MentionSanitizer } from './../../src/mentions/MentionSanitizer';
+import { MentionSanitizer } from './../../src/mentions/MentionSanitizer.js';
 
 describe('MentionSanitizer', function () {
-  describe('#sanitize()', function () {
+  describe('sanitize', function () {
     it('should return sanitized data', function () {
       let sanitized = MentionSanitizer.sanitize(
         <any>{
@@ -15,9 +15,9 @@ describe('MentionSanitizer', function () {
           'end-point': 'http://abc.com',
           slug: 'my-name',
         },
-        {}
+        {},
       );
-      //console.log(sanitized);
+
       assert.deepEqual(sanitized, {
         class: 'A-cls-9',
         id: 'An-id_9:.',

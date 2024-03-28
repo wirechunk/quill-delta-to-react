@@ -1,8 +1,8 @@
-import 'mocha';
-import * as assert from 'assert';
+import { describe, it } from 'node:test';
+import { strict as assert } from 'node:assert';
 
-import { OpAttributeSanitizer } from './../src/OpAttributeSanitizer';
-import { ListType, AlignType, DirectionType } from './../src/value-types';
+import { OpAttributeSanitizer } from './../src/OpAttributeSanitizer.js';
+import { ListType, AlignType, DirectionType } from './../src/value-types.js';
 
 describe('OpAttributeSanitizer', function () {
   describe('#IsValidHexColor()', function () {
@@ -53,7 +53,7 @@ describe('OpAttributeSanitizer', function () {
       assert.equal(OpAttributeSanitizer.IsValidColorLiteral('red1'), false);
       assert.equal(
         OpAttributeSanitizer.IsValidColorLiteral('red-green'),
-        false
+        false,
       );
       assert.equal(OpAttributeSanitizer.IsValidColorLiteral(''), false);
     });
@@ -70,7 +70,7 @@ describe('OpAttributeSanitizer', function () {
       assert.equal(OpAttributeSanitizer.IsValidRGBColor('rgb(260,0,0)'), false);
       assert.equal(
         OpAttributeSanitizer.IsValidRGBColor('rgb(2000,0,0)'),
-        false
+        false,
       );
     });
   });
@@ -157,9 +157,9 @@ describe('OpAttributeSanitizer', function () {
             mentions: true,
             mention: 1,
           },
-          {}
+          {},
         ),
-        {}
+        {},
       );
 
       assert.deepEqual(OpAttributeSanitizer.sanitize({ header: 1 }, {}), {
@@ -167,18 +167,18 @@ describe('OpAttributeSanitizer', function () {
       });
       assert.deepEqual(
         OpAttributeSanitizer.sanitize({ header: undefined }, {}),
-        {}
+        {},
       );
       assert.deepEqual(OpAttributeSanitizer.sanitize({ header: 100 }, {}), {
         header: 6,
       });
       assert.deepEqual(
         OpAttributeSanitizer.sanitize({ align: AlignType.Center }, {}),
-        { align: 'center' }
+        { align: 'center' },
       );
       assert.deepEqual(
         OpAttributeSanitizer.sanitize({ direction: DirectionType.Rtl }, {}),
-        { direction: 'rtl' }
+        { direction: 'rtl' },
       );
       assert.deepEqual(OpAttributeSanitizer.sanitize({ indent: 2 }, {}), {
         indent: 2,

@@ -1,68 +1,48 @@
-import { DeltaInsertOp } from './../DeltaInsertOp';
+import { DeltaInsertOp } from './../DeltaInsertOp.js';
 
-class InlineGroup {
-  readonly ops: DeltaInsertOp[];
-  constructor(ops: DeltaInsertOp[]) {
-    this.ops = ops;
-  }
+export class InlineGroup {
+  constructor(readonly ops: DeltaInsertOp[]) {}
 }
 
 class SingleItem {
-  readonly op: DeltaInsertOp;
-  constructor(op: DeltaInsertOp) {
-    this.op = op;
-  }
-}
-class VideoItem extends SingleItem {}
-class BlotBlock extends SingleItem {}
-
-class BlockGroup {
-  readonly op: DeltaInsertOp;
-  ops: DeltaInsertOp[];
-  constructor(op: DeltaInsertOp, ops: DeltaInsertOp[]) {
-    this.op = op;
-    this.ops = ops;
-  }
+  constructor(readonly op: DeltaInsertOp) {}
 }
 
-class ListGroup {
-  items: ListItem[];
-  constructor(items: ListItem[]) {
-    this.items = items;
-  }
+export class VideoItem extends SingleItem {}
+
+export class BlotBlock extends SingleItem {}
+
+export class BlockGroup {
+  constructor(
+    readonly op: DeltaInsertOp,
+    readonly ops: DeltaInsertOp[],
+  ) {}
 }
 
-class ListItem {
-  readonly item: BlockGroup;
-  innerList: ListGroup | null;
-  constructor(item: BlockGroup, innerList: ListGroup | null = null) {
-    this.item = item;
-    this.innerList = innerList;
-  }
+export class ListGroup {
+  constructor(readonly items: ListItem[]) {}
 }
 
-class TableGroup {
-  rows: TableRow[];
-  constructor(rows: TableRow[]) {
-    this.rows = rows;
-  }
+export class ListItem {
+  constructor(
+    readonly item: BlockGroup,
+    readonly innerList: ListGroup | null = null,
+  ) {}
 }
 
-class TableRow {
-  cells: TableCell[];
-  constructor(cells: TableCell[]) {
-    this.cells = cells;
-  }
+export class TableGroup {
+  constructor(readonly rows: TableRow[]) {}
 }
 
-class TableCell {
-  readonly item: BlockGroup;
-  constructor(item: BlockGroup) {
-    this.item = item;
-  }
+export class TableRow {
+  constructor(readonly cells: TableCell[]) {}
 }
 
-type TDataGroup =
+export class TableCell {
+  constructor(readonly item: BlockGroup) {}
+}
+
+export type TDataGroup =
   | VideoItem
   | InlineGroup
   | BlockGroup
@@ -71,16 +51,3 @@ type TDataGroup =
   | TableGroup
   | TableRow
   | TableCell;
-
-export {
-  VideoItem,
-  BlotBlock,
-  InlineGroup,
-  BlockGroup,
-  ListGroup,
-  ListItem,
-  TableGroup,
-  TableRow,
-  TableCell,
-  TDataGroup,
-};

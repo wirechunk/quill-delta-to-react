@@ -1,5 +1,5 @@
-import { OpLinkSanitizer } from '../OpLinkSanitizer';
-import { IOpAttributeSanitizerOptions } from './../OpAttributeSanitizer';
+import { OpLinkSanitizer } from '../OpLinkSanitizer.js';
+import { IOpAttributeSanitizerOptions } from './../OpAttributeSanitizer.js';
 
 interface IMention {
   [index: string]: string | undefined;
@@ -15,7 +15,7 @@ interface IMention {
 class MentionSanitizer {
   static sanitize(
     dirtyObj: IMention,
-    sanitizeOptions: IOpAttributeSanitizerOptions
+    sanitizeOptions: IOpAttributeSanitizerOptions,
   ): IMention {
     var cleanObj: any = {};
 
@@ -38,14 +38,14 @@ class MentionSanitizer {
     if (dirtyObj.avatar) {
       cleanObj.avatar = OpLinkSanitizer.sanitize(
         dirtyObj.avatar + '',
-        sanitizeOptions
+        sanitizeOptions,
       );
     }
 
     if (dirtyObj['end-point']) {
       cleanObj['end-point'] = OpLinkSanitizer.sanitize(
         dirtyObj['end-point'] + '',
-        sanitizeOptions
+        sanitizeOptions,
       );
     }
 

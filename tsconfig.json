@@ -1,23 +1,20 @@
 {
    "compilerOptions": {
-      "module": "commonjs",
-      "removeComments": true,
+      "module": "es2022",
       "preserveConstEnums": true,
       "sourceMap": false,
-      "target": "es5",
-      "outDir": "dist/commonjs/",
-      "lib": [
-         "es6"
-      ],
+      "target": "ES2022",
+      "lib": ["DOM", "ES2021", "ES2023.Array"],
+      "outDir": "dist",
       "types": [
-         "node",
-         "mocha"
+         "node"
       ],
       "declaration": true,
       "noImplicitThis": true,
       "noImplicitAny": true,
+      "strict": true,
       "strictNullChecks": true,
-      "alwaysStrict": true,
+      "skipLibCheck": true,
       "noUnusedParameters": true,
       "noUnusedLocals": true,
       "noFallthroughCasesInSwitch": true,

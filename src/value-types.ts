@@ -1,5 +1,5 @@
 type NewLine = '\n';
-const NewLine = '\n' as NewLine;
+const newLine: NewLine = '\n';
 
 enum ListType {
   Ordered = 'ordered',
@@ -40,7 +40,7 @@ enum GroupType {
 }
 
 export {
-  NewLine,
+  newLine,
   ListType,
   ScriptType,
   DirectionType,

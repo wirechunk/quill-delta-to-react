@@ -1,34 +1,31 @@
-import { DeltaInsertOp } from './../DeltaInsertOp';
+import { DeltaInsertOp } from './../DeltaInsertOp.js';
 import {
-  IArraySlice,
-  flatten,
-  groupConsecutiveElementsWhile,
+  ArraySlice,
+  groupConsecutiveSatisfyingClassElementsWhile,
   sliceFromReverseWhile,
-} from './../helpers/array';
+} from './../helpers/array.js';
 import {
   VideoItem,
   InlineGroup,
   BlockGroup,
   TDataGroup,
   BlotBlock,
-} from './group-types';
+} from './group-types.js';
+
+const canBeInBlock = (op: DeltaInsertOp) =>
+  !(
+    op.isJustNewline() ||
+    op.isCustomEmbedBlock() ||
+    op.isVideo() ||
+    op.isContainerBlock()
+  );
 
 class Grouper {
   static pairOpsWithTheirBlock(ops: DeltaInsertOp[]): TDataGroup[] {
     let result: TDataGroup[] = [];
 
-    const canBeInBlock = (op: DeltaInsertOp) => {
-      return !(
-        op.isJustNewline() ||
-        op.isCustomEmbedBlock() ||
-        op.isVideo() ||
-        op.isContainerBlock()
-      );
-    };
-    const isInlineData = (op: DeltaInsertOp) => op.isInline();
-
-    let lastInd = ops.length - 1;
-    let opsSlice: IArraySlice;
+    const lastInd = ops.length - 1;
+    let opsSlice: ArraySlice<DeltaInsertOp>;
 
     for (var i = lastInd; i >= 0; i--) {
       let op = ops[i];
@@ -43,7 +40,7 @@ class Grouper {
         result.push(new BlockGroup(op, opsSlice.elements));
         i = opsSlice.sliceStartsAt > -1 ? opsSlice.sliceStartsAt : i;
       } else {
-        opsSlice = sliceFromReverseWhile(ops, i - 1, isInlineData);
+        opsSlice = sliceFromReverseWhile(ops, i - 1, (op) => op.isInline());
         result.push(new InlineGroup(opsSlice.elements.concat(op)));
         i = opsSlice.sliceStartsAt > -1 ? opsSlice.sliceStartsAt : i;
       }
@@ -54,58 +51,25 @@ class Grouper {
 
   static groupConsecutiveSameStyleBlocks(
     groups: TDataGroup[],
-    blocksOf = {
-      header: true,
-      codeBlocks: true,
-      blockquotes: true,
-      customBlocks: true,
-    }
+    blocksOf: {
+      header: boolean;
+      codeBlocks: boolean;
+      blockquotes: boolean;
+      customBlocks: boolean;
+    },
   ): Array<TDataGroup | BlockGroup[]> {
-    return groupConsecutiveElementsWhile(
+    return groupConsecutiveSatisfyingClassElementsWhile(
       groups,
-      (g: TDataGroup, gPrev: TDataGroup) => {
-        if (!(g instanceof BlockGroup) || !(gPrev instanceof BlockGroup)) {
-          return false;
-        }
-
-        return (
-          (blocksOf.codeBlocks &&
-            Grouper.areBothCodeblocksWithSameLang(g, gPrev)) ||
-          (blocksOf.blockquotes &&
-            Grouper.areBothBlockquotesWithSameAdi(g, gPrev)) ||
-          (blocksOf.header &&
-            Grouper.areBothSameHeadersWithSameAdi(g, gPrev)) ||
-          (blocksOf.customBlocks &&
-            Grouper.areBothCustomBlockWithSameAttr(g, gPrev))
-        );
-      }
+      BlockGroup,
+      (g, gPrev) =>
+        (blocksOf.codeBlocks &&
+          Grouper.areBothCodeblocksWithSameLang(g, gPrev)) ||
+        (blocksOf.blockquotes &&
+          Grouper.areBothBlockquotesWithSameAdi(g, gPrev)) ||
+        (blocksOf.header && Grouper.areBothSameHeadersWithSameAdi(g, gPrev)) ||
+        (blocksOf.customBlocks &&
+          Grouper.areBothCustomBlockWithSameAttr(g, gPrev)),
     );
-  }
-
-  // Moves all ops of same style consecutive blocks to the ops of first block
-  // and discards the rest.
-  static reduceConsecutiveSameStyleBlocksToOne(
-    groups: Array<TDataGroup | BlockGroup[]>
-  ): TDataGroup[] {
-    var newLineOp = DeltaInsertOp.createNewLineOp();
-    return groups.map(function (elm: TDataGroup | BlockGroup[]) {
-      if (!Array.isArray(elm)) {
-        if (elm instanceof BlockGroup && !elm.ops.length) {
-          elm.ops.push(newLineOp);
-        }
-        return elm;
-      }
-      var groupsLastInd = elm.length - 1;
-      elm[0].ops = flatten(
-        elm.map((g: BlockGroup, i: number) => {
-          if (!g.ops.length) {
-            return [newLineOp];
-          }
-          return g.ops.concat(i < groupsLastInd ? [newLineOp] : []);
-        })
-      );
-      return elm[0];
-    });
   }
 
   static areBothCodeblocksWithSameLang(g1: BlockGroup, gOther: BlockGroup) {

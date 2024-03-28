@@ -1,9 +1,9 @@
 import {
   IOpAttributeSanitizerOptions,
   IUrlSanitizerFn,
-} from './OpAttributeSanitizer';
-import * as url from './helpers/url';
-import { encodeLink } from './funcs-html';
+} from './OpAttributeSanitizer.js';
+import * as url from './helpers/url.js';
+import { encodeLink } from './funcs-html.js';
 
 class OpLinkSanitizer {
   static sanitize(link: string, options: IOpAttributeSanitizerOptions) {

@@ -1,7 +1,7 @@
-import 'mocha';
-import * as assert from 'assert';
+import { describe, it } from 'node:test';
+import { strict as assert } from 'node:assert';
 
-import { sanitize } from './../../src/helpers/url';
+import { sanitize } from './../../src/helpers/url.js';
 
 describe('Url Helpers Module', function () {
   describe('String#_sanitizeUrl() ', function () {

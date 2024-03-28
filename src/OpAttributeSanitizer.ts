@@ -1,8 +1,13 @@
-import { ListType, AlignType, DirectionType, ScriptType } from './value-types';
-import { MentionSanitizer } from './mentions/MentionSanitizer';
-import { IMention } from './mentions/MentionSanitizer';
-import { find } from './helpers/array';
-import { OpLinkSanitizer } from './OpLinkSanitizer';
+import {
+  ListType,
+  AlignType,
+  DirectionType,
+  ScriptType,
+} from './value-types.js';
+import { MentionSanitizer } from './mentions/MentionSanitizer.js';
+import { IMention } from './mentions/MentionSanitizer.js';
+import { OpLinkSanitizer } from './OpLinkSanitizer.js';
+import type { OptionalAttributes } from 'quill';
 
 interface IOpAttributes {
   background?: string | undefined;
@@ -48,8 +53,8 @@ interface IOpAttributeSanitizerOptions {
 
 class OpAttributeSanitizer {
   static sanitize(
-    dirtyAttrs: IOpAttributes,
-    sanitizeOptions: IOpAttributeSanitizerOptions
+    dirtyAttrs: OptionalAttributes['attributes'],
+    sanitizeOptions: IOpAttributeSanitizerOptions,
   ): IOpAttributes {
     var cleanAttrs: any = {};
 
@@ -174,10 +179,12 @@ class OpAttributeSanitizer {
     }
 
     if (
-      find(
-        [AlignType.Center, AlignType.Right, AlignType.Justify, AlignType.Left],
-        (a) => a === align
-      )
+      [
+        AlignType.Center,
+        AlignType.Right,
+        AlignType.Justify,
+        AlignType.Left,
+      ].find((a) => a === align)
     ) {
       cleanAttrs.align = align;
     }
@@ -193,7 +200,7 @@ class OpAttributeSanitizer {
     if (mentions && mention) {
       let sanitizedMention = MentionSanitizer.sanitize(
         mention,
-        sanitizeOptions
+        sanitizeOptions,
       );
       if (Object.keys(sanitizedMention).length > 0) {
         cleanAttrs.mentions = !!mentions;
@@ -218,7 +225,8 @@ class OpAttributeSanitizer {
   }
 
   static IsValidRGBColor(colorStr: string) {
-    const re = /^rgb\(((0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d),\s*){2}(0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d)\)$/i;
+    const re =
+      /^rgb\(((0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d),\s*){2}(0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d)\)$/i;
     return !!colorStr.match(re);
   }
 
