@@ -9,7 +9,7 @@ export type InlineStyleType =
   | ((value: string, op: DeltaInsertOp) => string | undefined)
   | { [x: string]: string };
 
-export interface IInlineStyles {
+export interface InlineStyles {
   indent?: InlineStyleType;
   align?: InlineStyleType;
   direction?: InlineStyleType;
@@ -22,7 +22,7 @@ const DEFAULT_INLINE_FONTS: { [key: string]: string } = {
   monospace: 'font-family: Monaco, Courier New, monospace',
 };
 
-export const DEFAULT_INLINE_STYLES: IInlineStyles = {
+export const DEFAULT_INLINE_STYLES: InlineStyles = {
   font: (value) => DEFAULT_INLINE_FONTS[value] || 'font-family:' + value,
   size: {
     small: 'font-size: 0.75em',
@@ -47,7 +47,7 @@ export const DEFAULT_INLINE_STYLES: IInlineStyles = {
 
 interface IOpToHtmlConverterOptions {
   classPrefix?: string;
-  inlineStyles?: boolean | IInlineStyles;
+  inlineStyles?: boolean | InlineStyles;
   listItemTag?: string;
   paragraphTag?: string;
   linkRel?: string;

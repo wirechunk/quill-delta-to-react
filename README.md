@@ -28,7 +28,7 @@ var converter = new QuillDeltaToHtmlConverter(deltaOps, cfg);
 var html = converter.convert(); 
 ```
 
-## Configuration ## 
+## Configuration
 
 `QuillDeltaToHtmlConverter` accepts a few configuration options as shown below:
 
@@ -39,7 +39,7 @@ var html = converter.convert();
 |`inlineStyles`| boolean or object | false | If true or an object, use inline styles instead of classes. See Rendering Inline Styles section below for using an object |
 |`multiLineBlockquote`| boolean | true | Instead of rendering multiple `blockquote` elements for quotes that are consecutive and have same styles(`align`, `indent`, and `direction`), it renders them into only one|
 |`multiLineHeader`| boolean | true | Same deal as `multiLineBlockquote` for headers|
-|`multiLineCodeblock`| boolean | true | Same deal as `multiLineBlockquote` for code-blocks|
+|`multiLineCodeBlock`| boolean | true | Same deal as `multiLineBlockquote` for code-blocks|
 |`multiLineParagraph`| boolean | true | Set to false to generate a new paragraph tag after each enter press (new line)|
 |`linkRel`| string | none generated | Specifies a value to put on the `rel` attr on all links. This can be overridden by an individual link op by specifying the `rel` attribute in the respective op's attributes|
 |`linkTarget`| string | '_blank' | Specifies target for all links; use `''` (empty string) to not generate `target` attribute. This can be overridden by an individual link op by specifiying the `target` with a value in the respective op's attributes.|
@@ -50,69 +50,13 @@ var html = converter.convert();
 |`customCssClasses`| function `(op: DeltaInsertOp): string \| string[] \| undefined` | undefined | Allows to provide custom css classes|
 |`customCssStyles`| function `(op: DeltaInsertOp): string \| string[] \| undefined` | undefined | Allows to provide custom css styles|
 
+## Rendering Inline Styles
 
-## Rendering Quill Formats ##
-
-You can customize the rendering of Quill formats by registering to the render events before calling the `convert()` method. 
-
-There are `beforeRender` and `afterRender` events and they are called multiple times before and after rendering each group. A group is one of:
-
-- continuous sets of inline elements
-- a video element
-- list elements
-- block elements (header, code-block, blockquote, align, indent, and direction)
-
-`beforeRender` event is called with raw operation objects for you to generate and return your own html. If you return a `falsy` value, system will return its own generated html. 
-
-`afterRender` event is called with generated html for you to inspect, maybe make some changes and return your modified or original html.
-
-```javascript
-
-converter.beforeRender(function(groupType, data){
-    // ... generate your own html 
-    // return your html
-});
-converter.afterRender(function(groupType, htmlString){
-    // modify if you wish
-    // return the html
-});
-
-html = converter.convert();
-
-```
-
-Following shows the parameter formats for `beforeRender` event: 
-
-
-
-|groupType|data|
-|---|---|
-|`video`|{op: `op object`}|
-|`block`|{op: `op object`: ops: Array<`op object`>}|
-|`list`| {items: Array<{item: `block`, innerList: `list` or `null` }> }|
-|`inline-group`|{ops: Array<`op object`>}|
-
-`op object` will have the following format: 
-
-```javascript
-{
-    insert: {
-        type: '' // one of 'text' | 'image' | 'video' | 'formula',
-        value: '' // some string value  
-    }, 
-    attributes: {
-        // ... quill delta attributes 
-    }
-}
-```
-
-## Rendering Inline Styles ##
-
-If you are rendering to HTML that you intend to include in an email, using classes and a style sheet are not recommended, as [not all browsers support style sheets](https://www.campaignmonitor.com/css/style-element/style-in-head/).  quill-delta-to-html supports rendering inline styles instead.  The easiest way to enable this is to pass the option `inlineStyles: true`.
+The easiest way to enable this is to pass the option `inlineStyles: true`.
 
 You can customize styles by passing an object to `inlineStyles` instead:
 
-```javascript
+```
 inlineStyles: {
    font: {
       'serif': 'font-family: Georgia, Times New Roman, serif',
@@ -138,70 +82,26 @@ inlineStyles: {
 };
 ```
 
-Keys to this object are the names of attributes from Quill.  The values are either a simple lookup table (like in the 'font' example above) used to map values to styles, or a `fn(value, op)` which returns a style string.
+Keys to this object are the names of attributes from Quill. The values are either a simple lookup table (like in the 'font' example above) used to map values to styles, or a `fn(value, op)` which returns a style string.
 
-## Rendering Custom Blot Formats ##
+## Advanced Custom Rendering Using Grouped Ops
 
-You need to tell system how to render your custom blot by registering a renderer callback function to `renderCustomWith` method before calling the `convert()` method. 
-
-If you would like your custom blot to be rendered as a block (not inside another block or grouped as part of inlines), then add `renderAsBlock: true` to its attributes. 
-
-Example:
-```javascript 
-let ops = [
-    {insert: {'my-blot': {id: 2, text: 'xyz'}}, attributes: {renderAsBlock: true|false}}
-];
-
-let converter = new QuillDeltaToHtmlConverter(ops);
-
-// customOp is your custom blot op
-// contextOp is the block op that wraps this op, if any. 
-// If, for example, your custom blot is located inside a list item,
-// then contextOp would provide that op. 
-converter.renderCustomWith(function(customOp, contextOp){
-    if (customOp.insert.type === 'my-blot') {
-        let val = customOp.insert.value;
-        return `<span id="${val.id}">${val.text}</span>`;
-    } else {
-        return 'Unmanaged custom blot!';
-    }
-});
-
-html = converter.convert();
-```
-`customOp object` will have the following format: 
+If you want to do the full rendering yourself, you can do so by getting the processed and grouped ops.
 
 ```javascript
-{
-    insert: {
-        type: string //whatever you specified as key for insert, in above example: 'my-blot'
-        value: any // value for the custom blot  
-    }, 
-    attributes: {
-        // ... any attributes custom blot may have
-    }
-}
+const groupedOps = converter.getGroupedOps();
 ```
 
-## Advanced Custom Rendering Using Grouped Ops ##
+Each element in the array will be an instance of the following types: 
 
-If you want to do the full rendering yourself, you can do so 
-by getting the processed & grouped ops.
-
-```javascript
-let groupedOps = converter.getGroupedOps();
-```
-Each element in groupedOps array will be an instance of the 
-following types: 
-
-|type|properties|
-|---|---|
-|`InlineGroup`|ops: Array<`op object`>|
-|`VideoItem`|op: `op object`|
-|`BlockGroup`|op: `op object`, ops: Array<`op object`>|
-|`ListGroup`|items: Array<`ListItem`>|
-||ListItem: {item:`BlockGroup`, innerList:`ListGroup`}|
-|`BlotBlock`|op: `op object`|
+|type| properties                                  |
+|---|---------------------------------------------|
+|`InlineGroup`| ops: Array<`op object`>                     |
+|`VideoItem`| op: `op object`                             |
+|`BlockGroup`| op: `op object`, ops: Array<`op object`>    |
+|`ListGroup`| items: Array<`ListItem`>                    |
+|`ListItem`| item:`BlockGroup`, innerList:`ListGroup` |
+|`BlotBlock`| op: `op object`                             |
 
 `BlotBlock` represents custom blots with `renderAsBlock:true` property pair in its attributes
 

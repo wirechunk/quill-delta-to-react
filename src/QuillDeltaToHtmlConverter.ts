@@ -1,5 +1,5 @@
 import {
-  IInlineStyles,
+  InlineStyles,
   IOpToHtmlConverterOptions,
   OpToHtmlConverter,
 } from './OpToHtmlConverter.js';
@@ -28,7 +28,7 @@ import {
   IOpAttributeSanitizerOptions,
   OpAttributeSanitizer,
 } from './OpAttributeSanitizer.js';
-import { TableGrouper } from './grouper/TableGrouper.js';
+import { groupTables } from './grouper/TableGrouper.js';
 import { denormalizeInsertOp } from './denormalizeInsertOp.js';
 import { convertInsertVal } from './convertInsertVal.js';
 
@@ -40,14 +40,14 @@ interface IQuillDeltaToHtmlConverterOptions
 
   multiLineBlockquote?: boolean;
   multiLineHeader?: boolean;
-  multiLineCodeblock?: boolean;
+  multiLineCodeBlock?: boolean;
   multiLineParagraph?: boolean;
   multiLineCustomBlock?: boolean;
 }
 
-const BrTag = '<br/>';
+const brTag = '<br/>';
 
-class QuillDeltaToHtmlConverter {
+export class QuillDeltaToHtmlConverter {
   private readonly options: IQuillDeltaToHtmlConverterOptions;
   private readonly rawDeltaOps: DeltaInsertOpType[] = [];
   private readonly converterOptions: IOpToHtmlConverterOptions;
@@ -62,7 +62,7 @@ class QuillDeltaToHtmlConverter {
       inlineStyles: false,
       multiLineBlockquote: true,
       multiLineHeader: true,
-      multiLineCodeblock: true,
+      multiLineCodeBlock: true,
       multiLineParagraph: true,
       multiLineCustomBlock: true,
       allowBackgroundClasses: false,
@@ -73,7 +73,7 @@ class QuillDeltaToHtmlConverter {
       listItemTag: 'li',
     };
 
-    var inlineStyles: IInlineStyles | undefined;
+    var inlineStyles: InlineStyles | undefined;
     if (!this.options.inlineStyles) {
       inlineStyles = undefined;
     } else if (typeof this.options.inlineStyles === 'object') {
@@ -136,13 +136,13 @@ class QuillDeltaToHtmlConverter {
       {
         blockquotes: !!this.options.multiLineBlockquote,
         header: !!this.options.multiLineHeader,
-        codeBlocks: !!this.options.multiLineCodeblock,
+        codeBlocks: !!this.options.multiLineCodeBlock,
         customBlocks: !!this.options.multiLineCustomBlock,
       },
     );
 
     // Move all ops of same style consecutive blocks to the ops of first block and discard the rest.
-    let groupedOps = groupedSameStyleBlocks.map((elm) => {
+    const groupedOps = groupedSameStyleBlocks.map((elm) => {
       if (Array.isArray(elm)) {
         const groupsLastInd = elm.length - 1;
         return new BlockGroup(
@@ -163,13 +163,10 @@ class QuillDeltaToHtmlConverter {
       return elm;
     });
 
-    const tableGrouper = new TableGrouper();
-    groupedOps = tableGrouper.group(groupedOps);
-
-    return nestLists(groupedOps);
+    return nestLists(groupTables(groupedOps));
   }
 
-  convert() {
+  render() {
     return this.getGroupedOps()
       .map((group) => {
         if (group instanceof ListGroup) {
@@ -310,7 +307,7 @@ class QuillDeltaToHtmlConverter {
     }
 
     var inlines = ops.map((op) => this._renderInline(op, bop)).join('');
-    return htmlParts.openingTag + (inlines || BrTag) + htmlParts.closingTag;
+    return htmlParts.openingTag + (inlines || brTag) + htmlParts.closingTag;
   }
 
   _renderInlines(ops: DeltaInsertOp[], isInlineGroup = true) {
@@ -329,14 +326,14 @@ class QuillDeltaToHtmlConverter {
 
     let startParaTag = makeStartTag(this.options.paragraphTag);
     let endParaTag = makeEndTag(this.options.paragraphTag);
-    if (html === BrTag || this.options.multiLineParagraph) {
+    if (html === brTag || this.options.multiLineParagraph) {
       return startParaTag + html + endParaTag;
     }
     return (
       startParaTag +
       html
-        .split(BrTag)
-        .map((v) => v || BrTag)
+        .split(brTag)
+        .map((v) => v || brTag)
         .join(endParaTag + startParaTag) +
       endParaTag
     );
@@ -347,7 +344,7 @@ class QuillDeltaToHtmlConverter {
       return this._renderCustom(op, contextOp);
     }
     var converter = new OpToHtmlConverter(op, this.converterOptions);
-    return converter.getHtml().replace(/\n/g, BrTag);
+    return converter.getHtml().replace(/\n/g, brTag);
   }
 
   _renderCustom(op: DeltaInsertOp, contextOp: DeltaInsertOp | null) {
@@ -372,5 +369,3 @@ class QuillDeltaToHtmlConverter {
     this.callbacks['renderCustomOp_cb'] = cb;
   }
 }
-
-export { QuillDeltaToHtmlConverter };

@@ -1,9 +1,8 @@
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-
 import { DeltaInsertOp } from '../../src/DeltaInsertOp.js';
 import { Grouper } from '../../src/grouper/Grouper.js';
-import { TableGrouper } from '../../src/grouper/TableGrouper.js';
+import { groupTables } from '../../src/grouper/TableGrouper.js';
 import {
   TableGroup,
   TableRow,
@@ -27,8 +26,7 @@ describe('TableGrouper', function () {
 
     it('should return table with 3 rows and 3 cells', function () {
       var groups = Grouper.pairOpsWithTheirBlock(ops);
-      var tableGrouper = new TableGrouper();
-      var act = tableGrouper.group(groups);
+      var act = groupTables(groups);
       var exp = [
         new TableGroup([
           new TableRow([
@@ -63,8 +61,7 @@ describe('TableGrouper', function () {
 
     it('should return table with 1 row', function () {
       var groups = Grouper.pairOpsWithTheirBlock(ops);
-      var tableGrouper = new TableGrouper();
-      var act = tableGrouper.group(groups);
+      var act = groupTables(groups);
       var exp = [
         new TableGroup([
           new TableRow([
@@ -88,8 +85,7 @@ describe('TableGrouper', function () {
 
     it('should return table with 1 col', function () {
       var groups = Grouper.pairOpsWithTheirBlock(ops);
-      var tableGrouper = new TableGrouper();
-      var act = tableGrouper.group(groups);
+      var act = groupTables(groups);
       var exp = [
         new TableGroup([
           new TableRow([new TableCell(<BlockGroup>groups[0])]),

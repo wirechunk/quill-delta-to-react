@@ -1,6 +1,7 @@
 {
    "compilerOptions": {
-      "module": "es2022",
+      "module": "NodeNext",
+      "moduleResolution": "NodeNext",
       "preserveConstEnums": true,
       "sourceMap": false,
       "target": "ES2022",
@@ -18,9 +19,11 @@
       "noUnusedParameters": true,
       "noUnusedLocals": true,
       "noFallthroughCasesInSwitch": true,
-      "esModuleInterop": true
+      "esModuleInterop": true,
+      "jsx": "react-jsx"
    },
    "include": [
-      "src/**/*.ts"
+      "src/**/*.ts",
+      "src/**/*.tsx"
    ]
 }

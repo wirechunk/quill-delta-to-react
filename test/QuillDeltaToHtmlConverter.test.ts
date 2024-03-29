@@ -32,7 +32,7 @@ describe('QuillDeltaToHtmlConverter', function () {
       var qdc = new QuillDeltaToHtmlConverter(delta1.ops, {
         classPrefix: 'noz',
       });
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(html, delta1.html);
     });
 
@@ -45,7 +45,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           }
         },
       });
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(
         html.includes('<span style="color:red;font-size: 2.5em">huge</span>'),
         true,
@@ -57,7 +57,7 @@ describe('QuillDeltaToHtmlConverter', function () {
       var qdc = new QuillDeltaToHtmlConverter(hugeOps, {
         inlineStyles: 1,
       } as any);
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(
         html.includes('<span style="font-size: 2.5em">huge</span>'),
         true,
@@ -73,7 +73,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           },
         },
       });
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(
         html.includes('<span style="font-size: 6em">huge</span>'),
         true,
@@ -82,7 +82,7 @@ describe('QuillDeltaToHtmlConverter', function () {
     });
   });
 
-  describe('convert()', function () {
+  describe('render', function () {
     var ops2 = [
       { insert: 'this is text' },
       { insert: '\n' },
@@ -95,7 +95,7 @@ describe('QuillDeltaToHtmlConverter', function () {
     it('should render html', function () {
       var qdc = new QuillDeltaToHtmlConverter(ops2);
 
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(html.indexOf('<pre>this is code') > -1, true, html);
     });
 
@@ -115,7 +115,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         },
       ];
       var qdc = new QuillDeltaToHtmlConverter(ops);
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(
         html,
         [
@@ -134,7 +134,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           },
         },
       ]);
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(
         html,
         ['<p><a', ' href="about:blank">mention</a></p>'].join(''),
@@ -159,14 +159,14 @@ describe('QuillDeltaToHtmlConverter', function () {
       var qdc = new QuillDeltaToHtmlConverter(ops, {
         linkRel: 'license',
       });
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(
         html,
         '<p><a href="#" target="_blank" rel="nofollow noopener">external link</a><a href="#" target="_blank" rel="license">internal link</a></p>',
       );
 
       qdc = new QuillDeltaToHtmlConverter(ops);
-      html = qdc.convert();
+      html = qdc.render();
       assert.equal(
         html,
         '<p><a href="#" target="_blank" rel="nofollow noopener">external link</a><a href="#" target="_blank">internal link</a></p>',
@@ -181,7 +181,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         },
       ];
       let qdc = new QuillDeltaToHtmlConverter(ops);
-      let html = qdc.convert();
+      let html = qdc.render();
       assert.equal(
         html,
         [
@@ -205,7 +205,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         { insert: '\n', attributes: { list: 'ordered' } },
       ];
       var qdc = new QuillDeltaToHtmlConverter(ops4);
-      var html = qdc.convert();
+      var html = qdc.render();
 
       assert.equal(html.indexOf('<p>mr') > -1, true);
       assert.equal(html.indexOf('</ol><ul><li>there') > -1, true);
@@ -216,7 +216,7 @@ describe('QuillDeltaToHtmlConverter', function () {
       var qdc = new QuillDeltaToHtmlConverter(ops4, {
         multiLineParagraph: false,
       });
-      var html = qdc.convert();
+      var html = qdc.render();
 
       assert.equal(
         html,
@@ -236,7 +236,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         { insert: '\n', attributes: { indent: 1, list: 'unchecked' } },
       ];
       var qdc = new QuillDeltaToHtmlConverter(ops4);
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(
         html,
         [
@@ -259,13 +259,13 @@ describe('QuillDeltaToHtmlConverter', function () {
         { insert: '\n', attributes: { indent: 2 } },
       ];
       var qdc = new QuillDeltaToHtmlConverter(ops4, { paragraphTag: 'div' });
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(html.indexOf('<div class="ql-align') > -1, true);
       assert.equal(html.indexOf('<div class="ql-direction') > -1, true);
       assert.equal(html.indexOf('<div class="ql-indent') > -1, true);
 
       var qdc = new QuillDeltaToHtmlConverter(ops4);
-      var html = qdc.convert();
+      var html = qdc.render();
       assert.equal(html.indexOf('<p class="ql-align') > -1, true);
       assert.equal(html.indexOf('<p class="ql-direction') > -1, true);
       assert.equal(html.indexOf('<p class="ql-indent') > -1, true);
@@ -278,7 +278,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         { insert: '\n' },
       ];
       let qdc = new QuillDeltaToHtmlConverter(ops, { linkTarget: '' });
-      let html = qdc.convert();
+      let html = qdc.render();
       assert.equal(
         html,
         [
@@ -289,7 +289,7 @@ describe('QuillDeltaToHtmlConverter', function () {
       );
 
       qdc = new QuillDeltaToHtmlConverter(ops);
-      html = qdc.convert();
+      html = qdc.render();
       assert.equal(
         html,
         [
@@ -300,7 +300,7 @@ describe('QuillDeltaToHtmlConverter', function () {
       );
 
       qdc = new QuillDeltaToHtmlConverter(ops, { linkTarget: '_top' });
-      html = qdc.convert();
+      html = qdc.render();
       assert.equal(
         html,
         [
@@ -326,7 +326,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         },
       });
       assert.equal(
-        qdc.convert(),
+        qdc.render(),
         [
           `<p><a href="http://yahoo<%=abc%>/ed" target="_blank">test</a>`,
           `<a href="http://abc&lt;" target="_blank">hi</a></p>`,
@@ -361,7 +361,7 @@ describe('QuillDeltaToHtmlConverter', function () {
 
       let qdc = new QuillDeltaToHtmlConverter(ops);
       assert.equal(
-        qdc.convert(),
+        qdc.render(),
         [
           `<table><tbody>`,
           `<tr><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td></tr>`,
@@ -388,7 +388,7 @@ describe('QuillDeltaToHtmlConverter', function () {
 
       let qdc = new QuillDeltaToHtmlConverter(ops);
       assert.equal(
-        qdc.convert(),
+        qdc.render(),
         [
           `<table><tbody>`,
           `<tr><td data-row="row-1">cell</td></tr>`,
@@ -487,7 +487,7 @@ describe('QuillDeltaToHtmlConverter', function () {
 
       let qdc = new QuillDeltaToHtmlConverter(ops);
       assert.equal(
-        qdc.convert(),
+        qdc.render(),
         [
           `<table><tbody>`,
           `<tr><td data-row="row-1">11</td><td data-row="row-1">12</td><td data-row="row-1">13</td></tr>`,
@@ -580,7 +580,7 @@ describe('QuillDeltaToHtmlConverter', function () {
                            custom blot`, () => {
       let ops = [{ insert: { customstuff: 'my val' } }];
       let qdc = new QuillDeltaToHtmlConverter(ops);
-      assert.equal(qdc.convert(), '<p></p>');
+      assert.equal(qdc.render(), '<p></p>');
     });
     it('should render custom insert types with given renderer', () => {
       let ops = [
@@ -594,7 +594,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         }
         return 'unknown';
       });
-      let html = qdc.convert();
+      let html = qdc.render();
       assert.equal(html, '<p><b><i>my text</i></b>unknown</p>');
     });
 
@@ -614,7 +614,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         }
         return 'unknown';
       });
-      let html = qdc.convert();
+      let html = qdc.render();
       assert.equal(html, '<p>hello my friend!</p><div>how r u?</div>');
     });
 
@@ -635,11 +635,11 @@ describe('QuillDeltaToHtmlConverter', function () {
       };
       let qdc = new QuillDeltaToHtmlConverter(ops.slice(0, 2));
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.convert(), '<pre>:</pre>');
+      assert.equal(qdc.render(), '<pre>:</pre>');
 
       qdc = new QuillDeltaToHtmlConverter(ops);
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.convert(), '<pre>:\ncode1\n:</pre>');
+      assert.equal(qdc.render(), '<pre>:\ncode1\n:</pre>');
 
       qdc = new QuillDeltaToHtmlConverter(ops, {
         customTag: (format) => {
@@ -649,7 +649,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         },
       });
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.convert(), '<code>:\ncode1\n:</code>');
+      assert.equal(qdc.render(), '<code>:\ncode1\n:</code>');
     });
 
     it('should render custom insert types in headers with given renderer', () => {
@@ -669,11 +669,11 @@ describe('QuillDeltaToHtmlConverter', function () {
       };
       let qdc = new QuillDeltaToHtmlConverter(ops.slice(0, 2));
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.convert(), '<h1>:</h1>');
+      assert.equal(qdc.render(), '<h1>:</h1>');
 
       qdc = new QuillDeltaToHtmlConverter(ops);
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.convert(), '<h1>:<br/>hello<br/>:</h1>');
+      assert.equal(qdc.render(), '<h1>:<br/>hello<br/>:</h1>');
     });
   });
 
@@ -871,7 +871,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           },
         ];
         var qdc = new QuillDeltaToHtmlConverter(ops);
-        let html = qdc.convert();
+        let html = qdc.render();
         assert.equal(
           html,
           [
@@ -884,9 +884,9 @@ describe('QuillDeltaToHtmlConverter', function () {
         );
 
         qdc = new QuillDeltaToHtmlConverter(ops, {
-          multiLineCodeblock: false,
+          multiLineCodeBlock: false,
         });
-        html = qdc.convert();
+        html = qdc.render();
         assert.equal(
           '<pre>line 1</pre><pre>line 2</pre>' +
             '<pre data-language="javascript">line 3</pre>' +
@@ -897,7 +897,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           html,
         );
         qdc = new QuillDeltaToHtmlConverter([ops[0], ops[1]]);
-        html = qdc.convert();
+        html = qdc.render();
         assert.equal(html, '<pre>line 1</pre>');
       });
     });
@@ -980,7 +980,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           }
         },
       });
-      let html = qdc.convert();
+      let html = qdc.render();
       assert.equal(
         html,
         [
@@ -996,7 +996,7 @@ describe('QuillDeltaToHtmlConverter', function () {
       qdc = new QuillDeltaToHtmlConverter(ops, {
         multiLineCustomBlock: false,
       });
-      html = qdc.convert();
+      html = qdc.render();
       assert.equal(
         '<p>line 1</p><p>line 2</p>' +
           '<p>line 3</p>' +
@@ -1007,7 +1007,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         html,
       );
       qdc = new QuillDeltaToHtmlConverter([ops[0], ops[1]]);
-      html = qdc.convert();
+      html = qdc.render();
       assert.equal(html, '<p>line 1</p>');
     });
 
@@ -1058,7 +1058,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           calls.x++;
           return html;
         });
-        qdc.convert();
+        qdc.render();
         assert.equal(calls.x, 8);
       });
 
@@ -1077,7 +1077,7 @@ describe('QuillDeltaToHtmlConverter', function () {
           gtype === 'block' && calls.x++;
           return '';
         });
-        qdc.convert();
+        qdc.render();
         assert.equal(calls.x, 3);
       });
 
@@ -1089,7 +1089,7 @@ describe('QuillDeltaToHtmlConverter', function () {
         c.beforeRender(() => {
           return '<my custom video html>';
         });
-        var v = c.convert();
+        var v = c.render();
         assert.ok(v.indexOf('<my custom') > -1);
       });
 
@@ -1102,15 +1102,15 @@ describe('QuillDeltaToHtmlConverter', function () {
 
         c.beforeRender(dummy());
         c.afterRender(dummy());
-        v = c.convert();
+        v = c.render();
         assert.ok(v.indexOf('iframe') > -1);
 
         c.beforeRender(dummy);
-        var v = c.convert();
+        var v = c.render();
         assert.ok(v.indexOf('<iframe') > -1 && v.indexOf('aa') > -1);
 
         c.afterRender(dummy);
-        v = c.convert();
+        v = c.render();
         assert.ok(v === '');
       });
     });
