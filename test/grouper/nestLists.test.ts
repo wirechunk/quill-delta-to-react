@@ -11,7 +11,6 @@ import {
   BlockGroup,
 } from './../../src/grouper/group-types.js';
 import { ListType } from './../../src/value-types.js';
-import { inspect } from 'node:util';
 
 describe('nestLists', function () {
   it('should not nest different types of lists', function () {
@@ -64,8 +63,6 @@ describe('nestLists', function () {
     ];
 
     const groups = Grouper.pairOpsWithTheirBlock(ops);
-    console.log('GGGG');
-    console.log(inspect(groups, false, null, true));
 
     const got = nestLists(groups);
     const expected = [
@@ -84,10 +81,6 @@ describe('nestLists', function () {
         ),
       ]),
     ];
-    console.log('>>>>>>>>>');
-    console.log(inspect(got, false, null, true));
-    console.log('>>>');
-    console.log(inspect(expected, false, null, true));
 
     assert.deepEqual(got, expected);
   });
@@ -109,14 +102,13 @@ describe('nestLists', function () {
       new DeltaInsertOp('\n', { list: ListType.Ordered, indent: 5 }),
       new DeltaInsertOp('\n', { list: ListType.Bullet, indent: 4 }),
     ];
-    var pairs = Grouper.pairOpsWithTheirBlock(ops);
+    const pairs = Grouper.pairOpsWithTheirBlock(ops);
 
     const act = nestLists(pairs);
-    console.log(inspect(act, false, null, true));
 
-    var l1b = new ListItem(<BlockGroup>pairs[3]);
-    var lai = new ListGroup([new ListItem(<BlockGroup>pairs[2])]);
-    var l1a = new ListGroup([new ListItem(<BlockGroup>pairs[1], lai)]);
+    const lai = new ListGroup([new ListItem(<BlockGroup>pairs[2])]);
+    const l1a = new ListGroup([new ListItem(<BlockGroup>pairs[1], lai)]);
+    const l1b = new ListItem(<BlockGroup>pairs[3]);
 
     const li1 = new ListGroup([
       new ListItem(
@@ -124,14 +116,15 @@ describe('nestLists', function () {
         new ListGroup(l1a.items.concat(l1b)),
       ),
     ]);
-    var li2 = new ListGroup([new ListItem(<BlockGroup>pairs[4])]);
+    const li2 = new ListGroup([new ListItem(<BlockGroup>pairs[4])]);
 
-    assert.deepEqual(act, [
+    const expected = [
       new ListGroup(li1.items.concat(li2.items)),
-
       new InlineGroup([ops[10], ops[11]]),
       new ListGroup([new ListItem(new BlockGroup(ops[12], []))]),
       new ListGroup([new ListItem(new BlockGroup(ops[13], []))]),
-    ]);
+    ];
+
+    assert.deepEqual(act, expected);
   });
 });

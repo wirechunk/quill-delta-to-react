@@ -1,6 +1,5 @@
 import { BlockGroup, ListGroup, ListItem, TDataGroup } from './group-types.js';
 import { groupConsecutiveSatisfyingClassElementsWhile } from './../helpers/array.js';
-import { inspect } from 'node:util';
 
 const convertListBlocksToListGroups = (items: TDataGroup[]): TDataGroup[] =>
   groupConsecutiveSatisfyingClassElementsWhile(
@@ -23,7 +22,7 @@ const convertListBlocksToListGroups = (items: TDataGroup[]): TDataGroup[] =>
 
 export const nestLists = (groups: TDataGroup[]): TDataGroup[] => {
   const listBlocked = convertListBlocksToListGroups(groups);
-  console.log('LB', inspect(listBlocked, false, null, true));
+
   const nested = groupConsecutiveSatisfyingClassElementsWhile(
     listBlocked,
     ListGroup,
@@ -44,49 +43,42 @@ export const nestLists = (groups: TDataGroup[]): TDataGroup[] => {
         }
       }
     }
-    console.log('IG', inspect(indentGroups, false, null, true));
+
     Array.from(indentGroups.entries())
       .sort(([a], [b]) => b - a)
       .forEach(([indent, listGroups]) => {
-        listGroups.forEach((lg) => {
-          const lgGroupIdx = group.indexOf(lg);
-          for (let i = lgGroupIdx - 1; i >= 0; --i) {
-            const groupElem = group[i];
-            console.log('groupElem', i, groupElem);
-            if (indent > (groupElem.items[0].item.op.attributes.indent ?? 0)) {
-              let newListItem: ListItem;
-              const parent = groupElem.items[groupElem.items.length - 1];
-              console.log('PARENT', inspect(parent, false, null, true));
-              if (parent.innerList) {
-                newListItem = new ListItem(
-                  parent.item,
-                  new ListGroup(parent.innerList.items.concat(lg.items)),
-                );
-              } else {
-                newListItem = new ListItem(parent.item, lg);
+        listGroups.forEach((groupToMove) => {
+          const groupToMoveGroupIdx = group.indexOf(groupToMove);
+          for (let i = groupToMoveGroupIdx - 1; i >= 0; --i) {
+            const destinationGroup = group[i];
+            const destinationGroupIndent =
+              destinationGroup.items[0].item.op.attributes.indent ?? 0;
+            if (indent > destinationGroupIndent) {
+              const parent =
+                destinationGroup.items[destinationGroup.items.length - 1];
+              const newListItem = new ListItem(
+                parent.item,
+                parent.innerList
+                  ? new ListGroup(
+                      parent.innerList.items.concat(groupToMove.items),
+                    )
+                  : groupToMove,
+              );
+              group[i] = new ListGroup(
+                destinationGroup.items.with(
+                  destinationGroup.items.length - 1,
+                  newListItem,
+                ),
+              );
+              const ig = indentGroups.get(destinationGroupIndent);
+              if (ig) {
+                const idx = ig.indexOf(destinationGroup);
+                if (idx > -1) {
+                  ig[idx] = group[i];
+                }
               }
-              console.log(
-                'group (before before)',
-                inspect(group, false, null, true),
-              );
-              console.log('lgGroupIdx', lgGroupIdx);
-              console.log(
-                'group[lgGroupIdx] (before)',
-                inspect(group[lgGroupIdx], false, null, true),
-              );
-              group[lgGroupIdx - 1] = new ListGroup(
-                groupElem.items.with(groupElem.items.length - 1, newListItem),
-                // groupElem.items.concat(newListItem),
-              );
-              console.log(
-                'group[lgGroupIdx] (after)',
-                inspect(group[lgGroupIdx], false, null, true),
-              );
-              console.log('group (before)', inspect(group, false, null, true));
-              group.splice(lgGroupIdx, 1);
-              console.log('group (after)', inspect(group, false, null, true));
-              // Don't continue to the next group.
-              return;
+              group.splice(groupToMoveGroupIdx, 1);
+              break;
             }
           }
         });

@@ -1,7 +1,7 @@
 {
   "name": "quill-delta-to-react",
-  "version": "0.12.1",
-  "description": "Converts Quill's delta ops to HTML",
+  "version": "0.1.0",
+  "description": "Converts Quill's Delta ops to React",
   "main": "./dist/commonjs/main.js",
   "type": "module",
   "types": "./dist/commonjs/main.d.ts",
@@ -9,14 +9,13 @@
     "lodash.isequal": "^4.5.0"
   },
   "devDependencies": {
-    "@types/lodash.isequal": "^4.5.5",
+    "@types/lodash.isequal": "^4.5.8",
     "@types/node": "^20.11.30",
     "@types/quill": "^2.0.14",
     "browserify": "^16.2",
-    "coveralls": "^3.0",
-    "husky": "^3.0.9",
+    "husky": "^9.0.11",
     "prettier": "^3.2.5",
-    "pretty-quick": "^2.0.1",
+    "pretty-quick": "^4.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.3"
   },
@@ -28,13 +27,11 @@
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "typecheck": "./node_modules/typescript/bin/tsc --project ./tsconfig.test.json --noEmit",
-    "test": "node --loader ts-node/esm --test  test/*.test.ts test/**/*.test.ts",
-    "coverage": "./node_modules/nyc/bin/nyc.js report --reporter=text-lcov | coveralls ",
-    "coveragehtml": "./node_modules/nyc/bin/nyc.js report --reporter=html "
+    "test": "node --loader ts-node/esm --test  test/*.test.ts test/**/*.test.ts"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/nozer/quill-delta-to-html.git"
+    "url": "git+ssh://git@github.com/wirechunk/quill-delta-to-react.git"
   },
   "keywords": [
     "quill",
@@ -44,30 +41,9 @@
   "author": "Nihat Özer <nihatforweb@gmail.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/nozer/quill-delta-to-html/issues"
+    "url": "https://github.com/wirechunk/quill-delta-to-react/issues"
   },
-  "homepage": "https://github.com/nozer/quill-delta-to-html#readme",
-  "nyc": {
-    "include": [
-      "src/**/*.ts"
-    ],
-    "exclude": [
-      "typings",
-      "src/main.ts",
-      "**/*.d.ts"
-    ],
-    "extension": [
-      ".ts"
-    ],
-    "require": [
-      "ts-node/register"
-    ],
-    "reporter": [
-      "json",
-      "html"
-    ],
-    "all": true
-  },
+  "homepage": "https://github.com/wirechunk/quill-delta-to-react#readme",
   "husky": {
     "hooks": {
       "pre-commit": "pretty-quick --staged"
