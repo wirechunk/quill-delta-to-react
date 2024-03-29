@@ -11,7 +11,6 @@ export {
 export { DeltaInsertOp } from './DeltaInsertOp.js';
 export { InsertDataQuill, InsertDataCustom } from './InsertData.js';
 export {
-  newLine,
   ListType,
   ScriptType,
   DirectionType,
@@ -19,3 +18,4 @@ export {
   DataType,
   GroupType,
 } from './value-types.js';
+export { newLine } from './constants.js';

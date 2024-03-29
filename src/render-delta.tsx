@@ -1,8 +1,8 @@
 import {
   InlineStyles,
-  IOpToHtmlConverterOptions,
+  OpToNodeConverterOptions,
   OpToHtmlConverter,
-} from './OpToHtmlConverter.js';
+} from './op-to-node.js';
 import { DeltaInsertOp, isDeltaInsertOp } from './DeltaInsertOp.js';
 import { Grouper } from './grouper/Grouper.js';
 import {
@@ -25,22 +25,20 @@ import {
 } from './OpAttributeSanitizer.js';
 import { groupTables } from './grouper/TableGrouper.js';
 import { denormalizeInsertOp } from './denormalizeInsertOp.js';
-import { convertInsertVal } from './convertInsertVal.js';
+import { convertInsertValue } from './convert-insert-value.js';
 import { Component, ReactNode } from 'react';
+import { br } from './constants.js';
 
-interface RenderDeltaOptions
-  extends IOpAttributeSanitizerOptions,
-    IOpToHtmlConverterOptions {
-  orderedListTag?: string;
-  bulletListTag?: string;
-  multiLineBlockquote?: boolean;
-  multiLineHeader?: boolean;
-  multiLineCodeBlock?: boolean;
-  multiLineParagraph?: boolean;
-  multiLineCustomBlock?: boolean;
-}
-
-const brTag = '<br/>';
+type RenderDeltaOptions = IOpAttributeSanitizerOptions &
+  OpToNodeConverterOptions & {
+    orderedListTag?: string;
+    bulletListTag?: string;
+    multiLineBlockquote?: boolean;
+    multiLineHeader?: boolean;
+    multiLineCodeBlock?: boolean;
+    multiLineParagraph?: boolean;
+    multiLineCustomBlock?: boolean;
+  };
 
 type RenderDeltaProps = {
   deltaOps: unknown[];
@@ -49,7 +47,7 @@ type RenderDeltaProps = {
 
 type RenderDeltaState = {
   options: RenderDeltaOptions;
-  converterOptions: IOpToHtmlConverterOptions;
+  converterOptions: OpToNodeConverterOptions;
 };
 
 export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
@@ -82,7 +80,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       }
     }
 
-    const converterOptions: IOpToHtmlConverterOptions = {
+    const converterOptions: OpToNodeConverterOptions = {
       classPrefix: options.classPrefix,
       inlineStyles,
       listItemTag: options.listItemTag,
@@ -91,8 +89,8 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       linkTarget: options.linkTarget,
       allowBackgroundClasses: options.allowBackgroundClasses,
       customTag: options.customTag,
-      customTagAttributes: options.customTagAttributes,
-      customCssClasses: options.customCssClasses,
+      customAttributes: options.customAttributes,
+      customClasses: options.customClasses,
       customCssStyles: options.customCssStyles,
     };
 
@@ -149,7 +147,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       if (isDeltaInsertOp(unknownOp)) {
         const denormalizedOps = denormalizeInsertOp(unknownOp);
         for (const { insert, attributes } of denormalizedOps) {
-          const insertVal = convertInsertVal(insert, this.state.options);
+          const insertVal = convertInsertValue(insert, this.state.options);
           if (insertVal) {
             deltaOps.push(
               new DeltaInsertOp(
@@ -217,14 +215,14 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       li.item.op,
       this.state.converterOptions,
     );
-    var parts = converter.getHtmlParts();
-    var liElementsHtml = this.renderInlines(li.item.ops, false);
-    return (
-      parts.openingTag +
-      liElementsHtml +
-      (li.innerList ? this.renderList(li.innerList) : '') +
-      parts.closingTag
-    );
+    const parts = converter.renderNode();
+    const liElements = this.renderInlines(li.item.ops, false);
+    return parts.render(() => (
+      <>
+        {liElements}
+        {li.innerList && this.renderList(li.innerList)}
+      </>
+    ));
   }
 
   renderTable(table: TableGroup): string {
@@ -250,13 +248,15 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       cell.item.op,
       this.state.converterOptions,
     );
-    var parts = converter.getHtmlParts();
+    var parts = converter.renderNode();
     var cellElementsHtml = this.renderInlines(cell.item.ops, false);
     return (
-      makeStartTag('td', {
-        key: 'data-row',
-        value: cell.item.op.attributes.table,
-      }) +
+      makeStartTag('td', [
+        {
+          key: 'data-row',
+          value: cell.item.op.attributes.table,
+        },
+      ]) +
       parts.openingTag +
       cellElementsHtml +
       parts.closingTag +
@@ -266,42 +266,34 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
 
   renderBlock(bop: DeltaInsertOp, ops: DeltaInsertOp[]) {
     const converter = new OpToHtmlConverter(bop, this.state.converterOptions);
-    var htmlParts = converter.getHtmlParts();
+    const { render } = converter.renderNode();
 
     if (bop.isCodeBlock()) {
-      return (
-        htmlParts.openingTag +
-        ops
-          .map((iop) =>
-            iop.isCustomEmbed()
-              ? this.renderCustom(iop, bop)
-              : iop.insert.value,
-          )
-          .join('') +
-        htmlParts.closingTag
+      return render(
+        ops.map((iop) =>
+          iop.isCustomEmbed() ? this.renderCustom(iop, bop) : iop.insert.value,
+        ),
       );
     }
 
-    var inlines = ops.map((op) => this.renderInline(op, bop)).join('');
-    return htmlParts.openingTag + (inlines || brTag) + htmlParts.closingTag;
+    const inlines = ops.map((op) => this.renderInline(op, bop));
+    return render(inlines.length ? inlines : br);
   }
 
   renderInlines(ops: DeltaInsertOp[], isInlineGroup = true) {
-    var opsLen = ops.length - 1;
-    var html = ops
-      .map((op: DeltaInsertOp, i: number) => {
-        if (i > 0 && i === opsLen && op.isJustNewline()) {
-          return '';
-        }
-        return this.renderInline(op, null);
-      })
-      .join('');
+    const opsLen = ops.length - 1;
+    const html = ops.map((op, i) => {
+      if (i > 0 && i === opsLen && op.isJustNewline()) {
+        return '';
+      }
+      return this.renderInline(op, null);
+    });
     if (!isInlineGroup) {
       return html;
     }
 
-    let startParaTag = makeStartTag(this.state.options.paragraphTag);
-    let endParaTag = makeEndTag(this.state.options.paragraphTag);
+    const startParaTag = makeStartTag(this.state.options.paragraphTag);
+    const endParaTag = makeEndTag(this.state.options.paragraphTag);
     if (html === brTag || this.state.options.multiLineParagraph) {
       return startParaTag + html + endParaTag;
     }
@@ -320,7 +312,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       return this.renderCustom(op, contextOp);
     }
     const converter = new OpToHtmlConverter(op, this.state.converterOptions);
-    return converter.getHtml().replace(/\n/g, brTag);
+    return converter.getHtml().replace(/\n/g, br);
   }
 
   renderCustom(

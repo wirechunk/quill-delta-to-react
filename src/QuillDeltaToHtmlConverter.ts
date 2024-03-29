@@ -30,7 +30,7 @@ import {
 } from './OpAttributeSanitizer.js';
 import { groupTables } from './grouper/TableGrouper.js';
 import { denormalizeInsertOp } from './denormalizeInsertOp.js';
-import { convertInsertVal } from './convertInsertVal.js';
+import { convertInsertValue } from './convert-insert-value.js';
 
 interface IQuillDeltaToHtmlConverterOptions
   extends IOpAttributeSanitizerOptions,
@@ -91,8 +91,8 @@ export class QuillDeltaToHtmlConverter {
       linkTarget: this.options.linkTarget,
       allowBackgroundClasses: this.options.allowBackgroundClasses,
       customTag: this.options.customTag,
-      customTagAttributes: this.options.customTagAttributes,
-      customCssClasses: this.options.customCssClasses,
+      customAttributes: this.options.customAttributes,
+      customClasses: this.options.customClasses,
       customCssStyles: this.options.customCssStyles,
     };
     this.rawDeltaOps = deltaOps;
@@ -116,7 +116,7 @@ export class QuillDeltaToHtmlConverter {
       if (isDeltaInsertOp(unknownOp)) {
         const denormalizedOps = denormalizeInsertOp(unknownOp);
         for (const { insert, attributes } of denormalizedOps) {
-          const insertVal = convertInsertVal(insert, this.options);
+          const insertVal = convertInsertValue(insert, this.options);
           if (insertVal) {
             deltaOps.push(
               new DeltaInsertOp(

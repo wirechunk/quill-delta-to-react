@@ -1,9 +1,11 @@
-import { ITagKeyValue, makeEndTag, makeStartTag } from './funcs-html.js';
+import { AttributeKeyValue, makeEndTag, makeStartTag } from './funcs-html.js';
 import { DeltaInsertOp } from './DeltaInsertOp.js';
-import { newLine, ScriptType } from './value-types.js';
+import { ScriptType } from './value-types.js';
 import { IMention } from './mentions/MentionSanitizer.js';
 import * as arr from './helpers/array.js';
 import { OpAttributeSanitizer } from './OpAttributeSanitizer.js';
+import { newLine } from './constants.js';
+import { ReactNode } from 'react';
 
 export type InlineStyleType =
   | ((value: string, op: DeltaInsertOp) => string | undefined)
@@ -54,8 +56,8 @@ interface IOpToHtmlConverterOptions {
   linkTarget?: string;
   allowBackgroundClasses?: boolean;
   customTag?: (format: string, op: DeltaInsertOp) => string | void;
-  customTagAttributes?: (op: DeltaInsertOp) => { [key: string]: string } | void;
-  customCssClasses?: (op: DeltaInsertOp) => string | string[] | void;
+  customAttributes?: (op: DeltaInsertOp) => { [key: string]: string } | void;
+  customClasses?: (op: DeltaInsertOp) => string | string[] | void;
   customCssStyles?: (op: DeltaInsertOp) => string | string[] | void;
 }
 
@@ -87,7 +89,7 @@ class OpToHtmlConverter {
     return this.options.classPrefix + '-' + className;
   }
 
-  getHtml(): string {
+  getHtml(): ReactNode {
     const parts = this.getHtmlParts();
     return parts.openingTag + parts.content + parts.closingTag;
   }
@@ -217,16 +219,16 @@ class OpToHtmlConverter {
       .filter((item: any) => item !== undefined);
   }
 
-  getTagAttributes(): Array<ITagKeyValue> {
+  getTagAttributes(): Array<AttributeKeyValue> {
     if (this.op.attributes.code && !this.op.isLink()) {
       return [];
     }
 
     const makeAttr = this.makeAttr.bind(this);
-    const customTagAttributes = this.getCustomTagAttributes();
-    const customAttr = customTagAttributes
-      ? Object.keys(customTagAttributes).map((k) =>
-          makeAttr(k, customTagAttributes[k]),
+    const customAttributes = this.getCustomTagAttributes();
+    const customAttr = customAttributes
+      ? Object.keys(customAttributes).map((k) =>
+          makeAttr(k, customAttributes[k]),
         )
       : [];
     var classes = this.getCssClasses();
@@ -303,11 +305,11 @@ class OpToHtmlConverter {
     return tagAttrs;
   }
 
-  makeAttr(k: string, v: string): ITagKeyValue {
+  makeAttr(k: string, v: string): AttributeKeyValue {
     return { key: k, value: v };
   }
 
-  getLinkAttrs(): ITagKeyValue[] {
+  getLinkAttrs(): AttributeKeyValue[] {
     let targetForAll = OpAttributeSanitizer.isValidTarget(
       this.options.linkTarget || '',
     )
@@ -336,19 +338,19 @@ class OpToHtmlConverter {
 
   getCustomTagAttributes() {
     if (
-      this.options.customTagAttributes &&
-      typeof this.options.customTagAttributes === 'function'
+      this.options.customAttributes &&
+      typeof this.options.customAttributes === 'function'
     ) {
-      return this.options.customTagAttributes.apply(null, [this.op]);
+      return this.options.customAttributes.apply(null, [this.op]);
     }
   }
 
   getCustomCssClasses() {
     if (
-      this.options.customCssClasses &&
-      typeof this.options.customCssClasses === 'function'
+      this.options.customClasses &&
+      typeof this.options.customClasses === 'function'
     ) {
-      const res = this.options.customCssClasses.apply(null, [this.op]);
+      const res = this.options.customClasses.apply(null, [this.op]);
       if (res) {
         return Array.isArray(res) ? res : [res];
       }

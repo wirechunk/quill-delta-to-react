@@ -17,9 +17,8 @@ import {
   EncodeTarget,
 } from '../src/funcs-html.js';
 
-const encodeHtml = (str: string) => {
-  return encodeMappings(EncodeTarget.Html).reduce(encodeMapping, str);
-};
+const encodeHtml = (str: string) =>
+  encodeMappings(EncodeTarget.Html).reduce(encodeMapping, str);
 
 describe('QuillDeltaToHtmlConverter', function () {
   describe('constructor', function () {
@@ -962,14 +961,14 @@ describe('QuillDeltaToHtmlConverter', function () {
             return 'test';
           }
         },
-        customTagAttributes: (op) => {
+        customAttributes: (op) => {
           if (op.attributes['attr1'] === 'test') {
             return {
               attr1: op.attributes['attr1'],
             };
           }
         },
-        customCssClasses: (op) => {
+        customClasses: (op) => {
           if (op.attributes['attr1'] === 'test') {
             return ['ql-test'];
           }

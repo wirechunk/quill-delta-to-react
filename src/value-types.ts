@@ -1,7 +1,3 @@
-type NewLine = '\n';
-
-export const newLine: NewLine = '\n';
-
 export enum ListType {
   Ordered = 'ordered',
   Bullet = 'bullet',

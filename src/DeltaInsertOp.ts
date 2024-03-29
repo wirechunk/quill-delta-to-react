@@ -1,7 +1,8 @@
-import { newLine, ListType, DataType } from './value-types.js';
+import { ListType, DataType } from './value-types.js';
 import { IOpAttributes } from './OpAttributeSanitizer.js';
 import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import isEqual from 'lodash.isequal';
+import { newLine } from './constants.js';
 
 const isNonNullObject = (obj: unknown): obj is Record<string, unknown> =>
   !!obj && typeof obj === 'object';

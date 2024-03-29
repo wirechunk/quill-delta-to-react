@@ -1,5 +1,5 @@
-import { newLine } from './value-types.js';
 import { DeltaInsertOpType } from './DeltaInsertOp.js';
+import { newLine } from './constants.js';
 
 /**
  *  Splits by new line character ("\n") by putting new line characters into the

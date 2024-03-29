@@ -1,55 +1,29 @@
-interface ITagKeyValue {
+export type AttributeKeyValue = {
   key: string;
   value?: string;
-}
+};
 
-// Temporary export before this is moved to the test directory.
+export type AttributeKeyValueTuple = [string, string | undefined];
+
 export enum EncodeTarget {
   Html = 0,
   Url = 1,
 }
 
-function makeStartTag(
-  tag: any,
-  attrs: ITagKeyValue | ITagKeyValue[] | undefined = undefined,
-) {
-  if (!tag) {
-    return '';
-  }
+export const attrsArrayToObject = (attrs: AttributeKeyValue[] | undefined) =>
+  attrs
+    ? Object.fromEntries(
+        attrs.map<AttributeKeyValueTuple>((attr) => [attr.key, attr.value]),
+      )
+    : undefined;
 
-  var attrsStr = '';
-  if (attrs) {
-    var arrAttrs = ([] as ITagKeyValue[]).concat(attrs);
-    attrsStr = arrAttrs
-      .map(function (attr: any) {
-        return attr.key + (attr.value ? '="' + attr.value + '"' : '');
-      })
-      .join(' ');
-  }
-
-  var closing = '>';
-  if (tag === 'img' || tag === 'br') {
-    closing = '/>';
-  }
-  return attrsStr ? `<${tag} ${attrsStr}${closing}` : `<${tag}${closing}`;
-}
-
-function makeEndTag(tag: any = '') {
-  return (tag && `</${tag}>`) || '';
-}
-
-function decodeHtml(str: string) {
-  return encodeMappings(EncodeTarget.Html).reduce(decodeMapping, str);
-}
-
-function encodeLink(str: string) {
-  let linkMaps = encodeMappings(EncodeTarget.Url);
-  let decoded = linkMaps.reduce(decodeMapping, str);
+export const encodeLink = (str: string): string => {
+  const linkMaps = encodeMappings(EncodeTarget.Url);
+  const decoded = linkMaps.reduce(decodeMapping, str);
   return linkMaps.reduce(encodeMapping, decoded);
-}
+};
 
-// Temporary export before this is moved to the test directory.
-export function encodeMappings(mtype: EncodeTarget) {
+export function encodeMappings(mtype: EncodeTarget): string[][] {
   let maps = [
     ['&', '&amp;'],
     ['<', '&lt;'],
@@ -77,5 +51,3 @@ export function encodeMapping(str: string, mapping: string[]) {
 function decodeMapping(str: string, mapping: string[]) {
   return str.replace(new RegExp(mapping[1], 'g'), mapping[0].replace('\\', ''));
 }
-
-export { makeStartTag, makeEndTag, decodeHtml, encodeLink, ITagKeyValue };
