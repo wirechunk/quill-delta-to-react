@@ -1,54 +1,93 @@
-import type { AttributeKeyValueTuple } from './funcs-html.js';
 import { JSX, ReactNode } from 'react';
 import { DeltaInsertOp } from './DeltaInsertOp.js';
 import { ScriptType } from './value-types.js';
-import { IMention } from './mentions/MentionSanitizer.js';
-import { OpAttributeSanitizer } from './OpAttributeSanitizer.js';
-import { newLine } from './constants.js';
-import { preferSecond } from './helpers/array.js';
+import { Mention } from './mentions/MentionSanitizer.js';
+import { OpAttributes, OpAttributeSanitizer } from './OpAttributeSanitizer.js';
 
-export type InlineStyleType =
-  | ((value: string, op: DeltaInsertOp) => string | undefined)
-  | { [x: string]: string };
+export type InlineStyleType = (
+  value: string,
+  op: DeltaInsertOp,
+) => Partial<CSSStyleDeclaration> | undefined;
 
 export interface InlineStyles {
-  indent?: InlineStyleType;
-  align?: InlineStyleType;
-  direction?: InlineStyleType;
-  font?: InlineStyleType;
-  size?: InlineStyleType;
+  indent: InlineStyleType;
+  align: InlineStyleType;
+  direction: InlineStyleType;
+  font: InlineStyleType;
+  size: InlineStyleType;
+  [attribute: string]: InlineStyleType | undefined;
 }
 
-const DEFAULT_INLINE_FONTS: { [key: string]: string } = {
-  serif: 'font-family: Georgia, Times New Roman, serif',
-  monospace: 'font-family: Monaco, Courier New, monospace',
-};
-
-export const DEFAULT_INLINE_STYLES: InlineStyles = {
-  font: (value) => DEFAULT_INLINE_FONTS[value] || 'font-family:' + value,
-  size: {
-    small: 'font-size: 0.75em',
-    large: 'font-size: 1.5em',
-    huge: 'font-size: 2.5em',
+const DEFAULT_INLINE_STYLES: Pick<
+  InlineStyles,
+  'font' | 'size' | 'indent' | 'direction'
+> = {
+  font: (value) => {
+    switch (value) {
+      case 'serif':
+        return { fontFamily: 'Georgia, Times New Roman, serif' };
+      case 'monospace':
+        return { fontFamily: 'Monaco, Courier New, monospace' };
+      default:
+        return { fontFamily: value };
+    }
   },
-  indent: (value, op) => {
-    var indentSize = parseInt(value, 10) * 3;
-    var side = op.attributes['direction'] === 'rtl' ? 'right' : 'left';
-    return 'padding-' + side + ':' + indentSize + 'em';
+  size: (value) => {
+    switch (value) {
+      case 'small':
+        return { fontSize: '0.75em' };
+      case 'large':
+        return { fontSize: '1.5em' };
+      case 'huge':
+        return { fontSize: '2.5em' };
+      default:
+        return undefined;
+    }
   },
-  direction: (value, op) => {
+  indent: (value, op): Partial<CSSStyleDeclaration> => {
+    const indentSize = parseInt(value, 10) * 3;
+    return {
+      [op.attributes['direction'] === 'rtl' ? 'paddingRight' : 'paddingLeft']:
+        `${indentSize}em`,
+    };
+  },
+  direction: (value, op): Partial<CSSStyleDeclaration> | undefined => {
     if (value === 'rtl') {
-      return (
-        'direction:rtl' + (op.attributes['align'] ? '' : '; text-align:inherit')
-      );
+      return {
+        direction: 'rtl',
+        textAlign: op.attributes['align'] ? undefined : 'inherit',
+      };
     }
     return undefined;
   },
 };
 
+const blockTags = [
+  'blockquote',
+  'code-block',
+  'list',
+  'header',
+  'align',
+  'direction',
+  'indent',
+] as const;
+
+const inlineTags = [
+  'link',
+  'mentions',
+  'script',
+  'bold',
+  'italic',
+  'strike',
+  'underline',
+  'code',
+] as const;
+
+type AttributeKeyValueTuple = [string, string | undefined];
+
 export type OpToNodeConverterOptions = {
   classPrefix?: string;
-  inlineStyles?: boolean | InlineStyles;
+  inlineStyles?: boolean | Partial<InlineStyles>;
   listItemTag?: keyof JSX.IntrinsicElements;
   paragraphTag?: keyof JSX.IntrinsicElements;
   linkRel?: string;
@@ -61,8 +100,10 @@ export type OpToNodeConverterOptions = {
   customAttributes?: (
     op: DeltaInsertOp,
   ) => { [key: string]: string | undefined } | undefined;
-  customClasses?: (op: DeltaInsertOp) => string | string[] | void;
-  customCssStyles?: (op: DeltaInsertOp) => string | string[] | void;
+  customClasses?: (op: DeltaInsertOp) => string | string[] | undefined;
+  customCssStyles?: (
+    op: DeltaInsertOp,
+  ) => Partial<CSSStyleDeclaration> | undefined;
 };
 
 export type RenderNode = {
@@ -90,14 +131,6 @@ export class OpToHtmlConverter {
       return `${this.options.classPrefix}-${className}`;
     }
     return className;
-  }
-
-  getHtml(): ReactNode {
-    if (this.op.isJustNewline() && !this.op.isContainerBlock()) {
-      return newLine;
-    }
-
-    return this.renderNode().node;
   }
 
   renderNode(): RenderNode {
@@ -153,50 +186,66 @@ export class OpToHtmlConverter {
     );
   }
 
-  getCssStyles(): string[] {
-    var attrs: any = this.op.attributes;
+  getCssStyles(): Partial<CSSStyleDeclaration> {
+    const { inlineStyles } = this.options;
 
-    var propsArr = [['color']];
-    if (!!this.options.inlineStyles || !this.options.allowBackgroundClasses) {
-      propsArr.push(['background', 'background-color']);
+    const propsArr: Array<keyof OpAttributes> = ['color'];
+    if (inlineStyles || !this.options.allowBackgroundClasses) {
+      propsArr.push('background');
     }
-    if (this.options.inlineStyles) {
-      propsArr = propsArr.concat([
-        ['indent'],
-        ['align', 'text-align'],
-        ['direction'],
-        ['font', 'font-family'],
-        ['size'],
-      ]);
+    if (inlineStyles) {
+      propsArr.push('indent', 'align', 'direction', 'font', 'size');
     }
 
-    return (this.getCustomCssStyles() || [])
-      .concat(
-        propsArr
-          .filter((item) => !!attrs[item[0]])
-          .map((item: any[]) => {
-            let attribute = item[0];
-            let attrValue = attrs[attribute];
+    const styles: Partial<CSSStyleDeclaration> = {
+      ...this.getCustomCssStyles(),
+    };
 
-            let attributeConverter: InlineStyleType =
-              (this.options.inlineStyles &&
-                (this.options.inlineStyles as any)[attribute]) ||
-              (DEFAULT_INLINE_STYLES as any)[attribute];
+    for (const attribute of propsArr) {
+      const value: unknown = this.op.attributes[attribute];
+      if (typeof value === 'string') {
+        const attributeStyles =
+          inlineStyles &&
+          typeof inlineStyles === 'object' &&
+          inlineStyles[attribute];
 
-            if (typeof attributeConverter === 'object') {
-              return attributeConverter[attrValue];
-            } else if (typeof attributeConverter === 'function') {
-              var converterFn = attributeConverter as (
-                value: string,
-                op: DeltaInsertOp,
-              ) => string;
-              return converterFn(attrValue, this.op);
-            } else {
-              return preferSecond(item) + ':' + attrValue;
-            }
-          }),
-      )
-      .filter((item: any) => item !== undefined);
+        if (typeof attributeStyles === 'function') {
+          Object.assign(styles, attributeStyles(value, this.op));
+        } else {
+          switch (attribute) {
+            case 'background':
+              styles.backgroundColor = value;
+              break;
+            case 'color':
+              styles.color = value;
+              break;
+            case 'indent':
+              Object.assign(
+                styles,
+                DEFAULT_INLINE_STYLES.indent(value, this.op),
+              );
+              break;
+            case 'align':
+              styles.textAlign = value;
+              break;
+            case 'direction':
+              Object.assign(
+                styles,
+                DEFAULT_INLINE_STYLES.direction(value, this.op),
+              );
+              break;
+            case 'font':
+              Object.assign(styles, DEFAULT_INLINE_STYLES.font(value, this.op));
+              break;
+            case 'size':
+              Object.assign(styles, DEFAULT_INLINE_STYLES.size(value, this.op));
+              break;
+          }
+        }
+      }
+    }
+
+    return styles;
   }
 
   getTagAttributes(): AttributeKeyValueTuple[] {
@@ -248,7 +297,7 @@ export class OpToHtmlConverter {
     }
 
     if (this.op.isMentions()) {
-      var mention: IMention = this.op.attributes.mention!;
+      var mention: Mention = this.op.attributes.mention!;
       if (mention.class) {
         tagAttrs.push(['class', mention.class]);
       }
@@ -265,7 +314,7 @@ export class OpToHtmlConverter {
 
     const styles = this.getCssStyles();
     if (styles.length) {
-      tagAttrs.push(['style', styles.join(';')]);
+      tagAttrs.push(['style', styles]);
     }
 
     if (
@@ -332,15 +381,7 @@ export class OpToHtmlConverter {
   }
 
   getCustomCssStyles() {
-    if (
-      this.options.customCssStyles &&
-      typeof this.options.customCssStyles === 'function'
-    ) {
-      const res = this.options.customCssStyles.apply(null, [this.op]);
-      if (res) {
-        return Array.isArray(res) ? res : [res];
-      }
-    }
+    return this.options.customCssStyles?.apply(null, [this.op]);
   }
 
   getTag(): keyof JSX.IntrinsicElements {
@@ -359,30 +400,41 @@ export class OpToHtmlConverter {
     // blocks
     const paragraphTag = this.options.paragraphTag || 'p';
 
-    type TagOrKeyToTag =
-      | [keyof JSX.IntrinsicElements]
-      | [string, keyof JSX.IntrinsicElements];
-
-    const blockTags: TagOrKeyToTag[] = [
-      ['blockquote'],
-      ['code-block', 'pre'],
-      ['list', this.options.listItemTag || 'li'],
-      ['header'],
-      ['align', paragraphTag],
-      ['direction', paragraphTag],
-      ['indent', paragraphTag],
-    ];
-
-    for (const [firstItem, secondItem] of blockTags) {
-      if (attrs[firstItem]) {
-        const customTag = this.getCustomTag(firstItem);
+    for (const item of blockTags) {
+      if (attrs[item]) {
+        const customTag = this.getCustomTag(item);
         if (customTag) {
           return customTag;
         }
-        if (firstItem === 'header') {
-          return `h${attrs[firstItem]}` as keyof JSX.IntrinsicElements;
+        switch (item) {
+          case 'blockquote':
+            return item;
+          case 'code-block':
+            return 'pre';
+          case 'list':
+            return this.options.listItemTag || 'li';
+          case 'header':
+            switch (attrs[item]?.toString()) {
+              case '1':
+                return 'h1';
+              case '2':
+                return 'h2';
+              case '3':
+                return 'h3';
+              case '4':
+                return 'h4';
+              case '5':
+                return 'h5';
+              case '6':
+                return 'h6';
+              default:
+                return 'h1';
+            }
+          case 'align':
+          case 'direction':
+          case 'indent':
+            return paragraphTag;
         }
-        return secondItem ?? (firstItem as keyof JSX.IntrinsicElements);
       }
     }
 
@@ -391,27 +443,29 @@ export class OpToHtmlConverter {
     }
 
     // inlines
-    const inlineTags: TagOrKeyToTag[] = [
-      ['link', 'a'],
-      ['mentions', 'a'],
-      ['script'],
-      ['bold', 'strong'],
-      ['italic', 'em'],
-      ['strike', 's'],
-      ['underline', 'u'],
-      ['code'],
-    ];
-
-    for (const [firstItem, secondItem] of inlineTags) {
-      if (attrs[firstItem]) {
-        const customTag = this.getCustomTag(firstItem);
+    for (const item of inlineTags) {
+      if (attrs[item]) {
+        const customTag = this.getCustomTag(item);
         if (customTag) {
           return customTag;
         }
-        if (firstItem === 'script') {
-          return attrs[firstItem] === ScriptType.Sub ? 'sub' : 'sup';
+        switch (item) {
+          case 'link':
+          case 'mentions':
+            return 'a';
+          case 'script':
+            return attrs[item] === ScriptType.Sub ? 'sub' : 'sup';
+          case 'bold':
+            return 'strong';
+          case 'italic':
+            return 'em';
+          case 'strike':
+            return 's';
+          case 'underline':
+            return 'u';
+          case 'code':
+            return 'code';
         }
-        return secondItem ?? (firstItem as keyof JSX.IntrinsicElements);
       }
     }
 

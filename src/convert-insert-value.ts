@@ -1,12 +1,11 @@
 import type { DeltaInsertOpType } from './DeltaInsertOp.js';
-import type { IOpAttributeSanitizerOptions } from './OpAttributeSanitizer.js';
+import type { OpAttributeSanitizerOptions } from './OpAttributeSanitizer.js';
 import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import { DataType } from './value-types.js';
-import { OpLinkSanitizer } from './OpLinkSanitizer.js';
 
 export const convertInsertValue = (
   insert: DeltaInsertOpType['insert'],
-  sanitizeOptions: IOpAttributeSanitizerOptions,
+  sanitizeOptions: OpAttributeSanitizerOptions,
 ): InsertData | null => {
   if (typeof insert === 'string') {
     return new InsertDataQuill(DataType.Text, insert);
@@ -17,21 +16,17 @@ export const convertInsertValue = (
     return null;
   }
 
+  const { urlSanitizer } = sanitizeOptions;
+
   return DataType.Image in insert
     ? new InsertDataQuill(
         DataType.Image,
-        OpLinkSanitizer.sanitize(
-          insert[DataType.Image] as string,
-          sanitizeOptions,
-        ),
+        urlSanitizer(insert[DataType.Image] as string),
       )
     : DataType.Video in insert
       ? new InsertDataQuill(
           DataType.Video,
-          OpLinkSanitizer.sanitize(
-            insert[DataType.Video] as string,
-            sanitizeOptions,
-          ),
+          urlSanitizer(insert[DataType.Video] as string),
         )
       : DataType.Formula in insert
         ? new InsertDataQuill(

@@ -27,8 +27,8 @@ class Grouper {
     const lastInd = ops.length - 1;
     let opsSlice: ArraySlice<DeltaInsertOp>;
 
-    for (var i = lastInd; i >= 0; i--) {
-      let op = ops[i];
+    for (let i = lastInd; i >= 0; i--) {
+      const op = ops[i];
 
       if (op.isVideo()) {
         result.push(new VideoItem(op));

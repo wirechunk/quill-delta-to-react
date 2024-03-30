@@ -1,5 +1,5 @@
 import { ListType, DataType } from './value-types.js';
-import { IOpAttributes } from './OpAttributeSanitizer.js';
+import { OpAttributes } from './OpAttributeSanitizer.js';
 import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import isEqual from 'lodash.isequal';
 import { newLine } from './constants.js';
@@ -9,7 +9,7 @@ const isNonNullObject = (obj: unknown): obj is Record<string, unknown> =>
 
 export type DeltaInsertOpType = {
   insert: string | Record<string, unknown>;
-  attributes?: IOpAttributes | null;
+  attributes?: OpAttributes | null;
 };
 
 export const isDeltaInsertOp = (op: unknown): op is DeltaInsertOpType => {
@@ -25,11 +25,11 @@ export const isDeltaInsertOp = (op: unknown): op is DeltaInsertOpType => {
 
 export class DeltaInsertOp {
   readonly insert: InsertData;
-  readonly attributes: IOpAttributes;
+  readonly attributes: OpAttributes;
 
   constructor(
     insertVal: InsertData | string,
-    attrs?: IOpAttributes | undefined,
+    attrs?: OpAttributes | undefined,
   ) {
     if (typeof insertVal === 'string') {
       insertVal = new InsertDataQuill(DataType.Text, insertVal);

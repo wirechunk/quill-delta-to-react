@@ -5,11 +5,10 @@ import {
   ScriptType,
 } from './value-types.js';
 import { MentionSanitizer } from './mentions/MentionSanitizer.js';
-import { IMention } from './mentions/MentionSanitizer.js';
-import { OpLinkSanitizer } from './OpLinkSanitizer.js';
+import type { Mention } from './mentions/MentionSanitizer.js';
 import type { OptionalAttributes } from 'quill';
 
-interface IOpAttributes {
+interface OpAttributes {
   background?: string | undefined;
   color?: string | undefined;
   font?: string | undefined;
@@ -35,28 +34,25 @@ interface IOpAttributes {
   table?: string | undefined;
 
   mentions?: boolean | undefined;
-  mention?: IMention | undefined;
+  mention?: Mention | undefined;
   target?: string | undefined;
   rel?: string | undefined;
 
   // should this custom blot be rendered as block?
   renderAsBlock?: boolean | undefined;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-interface IUrlSanitizerFn {
-  (url: string): string | undefined;
-}
-interface IOpAttributeSanitizerOptions {
-  urlSanitizer?: IUrlSanitizerFn;
+interface OpAttributeSanitizerOptions {
+  urlSanitizer: (url: string) => string;
 }
 
 class OpAttributeSanitizer {
   static sanitize(
     dirtyAttrs: OptionalAttributes['attributes'],
-    sanitizeOptions: IOpAttributeSanitizerOptions,
-  ): IOpAttributes {
-    var cleanAttrs: any = {};
+    sanitizeOptions: OpAttributeSanitizerOptions,
+  ): OpAttributes {
+    const cleanAttrs: any = {};
 
     if (!dirtyAttrs || typeof dirtyAttrs !== 'object') {
       return cleanAttrs;
@@ -142,8 +138,8 @@ class OpAttributeSanitizer {
       cleanAttrs.width = width;
     }
 
-    if (link) {
-      cleanAttrs.link = OpLinkSanitizer.sanitize(link + '', sanitizeOptions);
+    if (link && typeof link === 'string') {
+      cleanAttrs.link = sanitizeOptions.urlSanitizer(link);
     }
     if (target && OpAttributeSanitizer.isValidTarget(target)) {
       cleanAttrs.target = target;
@@ -198,7 +194,7 @@ class OpAttributeSanitizer {
     }
 
     if (mentions && mention) {
-      let sanitizedMention = MentionSanitizer.sanitize(
+      const sanitizedMention = MentionSanitizer.sanitize(
         mention,
         sanitizeOptions,
       );
@@ -258,9 +254,4 @@ class OpAttributeSanitizer {
   }
 }
 
-export {
-  OpAttributeSanitizer,
-  IOpAttributes,
-  IOpAttributeSanitizerOptions,
-  IUrlSanitizerFn,
-};
+export { OpAttributeSanitizer, OpAttributes, OpAttributeSanitizerOptions };

@@ -11,14 +11,21 @@ import {
 } from './../src/value-types.js';
 import { InsertDataCustom, InsertDataQuill } from '../src/InsertData.js';
 import { InlineGroup } from '../src/grouper/group-types.js';
-import {
-  encodeMapping,
-  encodeMappings,
-  EncodeTarget,
-} from '../src/funcs-html.js';
+
+const htmlEncodingMap: Array<[string, string]> = [
+  ['&', '&amp;'],
+  ['<', '&lt;'],
+  ['>', '&gt;'],
+  ['"', '&quot;'],
+  ["'", '&#x27;'],
+  ['\\/', '&#x2F;'],
+];
 
 const encodeHtml = (str: string) =>
-  encodeMappings(EncodeTarget.Html).reduce(encodeMapping, str);
+  htmlEncodingMap.reduce(
+    (str, [search, replace]) => str.replaceAll(search, replace),
+    str,
+  );
 
 describe('QuillDeltaToHtmlConverter', function () {
   describe('constructor', function () {

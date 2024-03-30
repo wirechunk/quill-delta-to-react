@@ -1,7 +1,6 @@
-import { OpLinkSanitizer } from '../OpLinkSanitizer.js';
-import { IOpAttributeSanitizerOptions } from './../OpAttributeSanitizer.js';
+import type { OpAttributeSanitizerOptions } from './../OpAttributeSanitizer.js';
 
-interface IMention {
+export interface Mention {
   [index: string]: string | undefined;
   name?: string;
   target?: string;
@@ -12,61 +11,71 @@ interface IMention {
   'end-point'?: string;
 }
 
-class MentionSanitizer {
-  static sanitize(
-    dirtyObj: IMention,
-    sanitizeOptions: IOpAttributeSanitizerOptions,
-  ): IMention {
-    var cleanObj: any = {};
+type UnknownDirtyMention = {
+  [key in keyof Mention]?: unknown;
+};
 
-    if (!dirtyObj || typeof dirtyObj !== 'object') {
+const isDirtyMention = (value: unknown): value is UnknownDirtyMention =>
+  !!value && typeof value === 'object';
+
+export class MentionSanitizer {
+  static sanitize(
+    dirtyObj: unknown,
+    sanitizeOptions: OpAttributeSanitizerOptions,
+  ): Mention {
+    const cleanObj: Mention = {};
+
+    if (!isDirtyMention(dirtyObj)) {
       return cleanObj;
     }
 
-    if (dirtyObj.class && MentionSanitizer.IsValidClass(dirtyObj.class)) {
+    if (
+      typeof dirtyObj.class === 'string' &&
+      MentionSanitizer.isValidClass(dirtyObj.class)
+    ) {
       cleanObj.class = dirtyObj.class;
     }
 
-    if (dirtyObj.id && MentionSanitizer.IsValidId(dirtyObj.id)) {
+    if (
+      typeof dirtyObj.id === 'string' &&
+      MentionSanitizer.isValidId(dirtyObj.id)
+    ) {
       cleanObj.id = dirtyObj.id;
     }
 
-    if (MentionSanitizer.IsValidTarget(dirtyObj.target + '')) {
+    if (
+      typeof dirtyObj.target === 'string' &&
+      MentionSanitizer.isValidTarget(dirtyObj.target)
+    ) {
       cleanObj.target = dirtyObj.target;
     }
 
-    if (dirtyObj.avatar) {
-      cleanObj.avatar = OpLinkSanitizer.sanitize(
-        dirtyObj.avatar + '',
-        sanitizeOptions,
+    if (typeof dirtyObj.avatar === 'string') {
+      cleanObj.avatar = sanitizeOptions.urlSanitizer(dirtyObj.avatar);
+    }
+
+    if (typeof dirtyObj['end-point'] === 'string') {
+      cleanObj['end-point'] = sanitizeOptions.urlSanitizer(
+        dirtyObj['end-point'],
       );
     }
 
-    if (dirtyObj['end-point']) {
-      cleanObj['end-point'] = OpLinkSanitizer.sanitize(
-        dirtyObj['end-point'] + '',
-        sanitizeOptions,
-      );
-    }
-
-    if (dirtyObj.slug) {
-      cleanObj.slug = dirtyObj.slug + '';
+    if (typeof dirtyObj.slug === 'string') {
+      cleanObj.slug = dirtyObj.slug;
     }
 
     return cleanObj;
   }
 
-  static IsValidClass(classAttr: string) {
+  private static isValidClass(classAttr: string) {
     return !!classAttr.match(/^[a-zA-Z0-9_\-]{1,500}$/i);
   }
 
-  static IsValidId(idAttr: string) {
-    return !!idAttr.match(/^[a-zA-Z0-9_\-\:\.]{1,500}$/i);
+  private static isValidId(idAttr: string) {
+    return !!idAttr.match(/^[a-zA-Z0-9_\-:.]{1,500}$/i);
   }
 
-  static IsValidTarget(target: string) {
-    return ['_self', '_blank', '_parent', '_top'].indexOf(target) > -1;
+  private static isValidTarget(target: string) {
+    return ['_self', '_blank', '_parent', '_top'].includes(target);
   }
 }
-
-export { MentionSanitizer, IMention };

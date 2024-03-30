@@ -3,13 +3,6 @@ export type ArraySlice<T> = {
   elements: T[];
 };
 
-export function preferSecond(arr: any[]): any {
-  if (arr.length === 0) {
-    return null;
-  }
-  return arr.length >= 2 ? arr[1] : arr[0];
-}
-
 /**
  * Returns a new array by putting consecutive elements that are instances of classType and satisfying
  * predicate (if provided) into a new array and returning others as they are.

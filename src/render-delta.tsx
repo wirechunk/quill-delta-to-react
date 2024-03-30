@@ -13,36 +13,34 @@ import {
   ListItem,
   TableCell,
   TableGroup,
-  TableRow,
   TDataGroup,
   VideoItem,
 } from './grouper/group-types.js';
 import { nestLists } from './grouper/nestLists.js';
-import { makeEndTag, makeStartTag } from './funcs-html.js';
 import {
-  IOpAttributeSanitizerOptions,
+  OpAttributeSanitizerOptions,
   OpAttributeSanitizer,
 } from './OpAttributeSanitizer.js';
 import { groupTables } from './grouper/TableGrouper.js';
 import { denormalizeInsertOp } from './denormalizeInsertOp.js';
 import { convertInsertValue } from './convert-insert-value.js';
-import { Component, ReactNode } from 'react';
-import { br } from './constants.js';
+import { Component, Fragment, JSX, ReactNode } from 'react';
+import { br, newLine } from './constants.js';
 
-type RenderDeltaOptions = IOpAttributeSanitizerOptions &
+type RenderDeltaOptions = OpAttributeSanitizerOptions &
   OpToNodeConverterOptions & {
-    orderedListTag?: string;
-    bulletListTag?: string;
-    multiLineBlockquote?: boolean;
-    multiLineHeader?: boolean;
-    multiLineCodeBlock?: boolean;
-    multiLineParagraph?: boolean;
-    multiLineCustomBlock?: boolean;
+    orderedListTag: keyof JSX.IntrinsicElements;
+    bulletListTag: keyof JSX.IntrinsicElements;
+    multiLineBlockquote: boolean;
+    multiLineHeader: boolean;
+    multiLineCodeBlock: boolean;
+    multiLineParagraph: boolean;
+    multiLineCustomBlock: boolean;
   };
 
 type RenderDeltaProps = {
   deltaOps: unknown[];
-  options?: RenderDeltaOptions;
+  options?: Partial<RenderDeltaOptions>;
 };
 
 type RenderDeltaState = {
@@ -55,23 +53,24 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     super(props);
 
     const options: RenderDeltaOptions = {
-      paragraphTag: 'p',
-      classPrefix: 'ql',
-      inlineStyles: false,
+      orderedListTag: 'ol',
+      bulletListTag: 'ul',
       multiLineBlockquote: true,
       multiLineHeader: true,
       multiLineCodeBlock: true,
       multiLineParagraph: true,
       multiLineCustomBlock: true,
-      allowBackgroundClasses: false,
-      linkTarget: '_blank',
-      ...props.options,
-      orderedListTag: 'ol',
-      bulletListTag: 'ul',
+      classPrefix: 'ql',
+      inlineStyles: false,
       listItemTag: 'li',
+      paragraphTag: 'p',
+      linkTarget: '_blank',
+      allowBackgroundClasses: false,
+      urlSanitizer: (url) => url,
+      ...props.options,
     };
 
-    let inlineStyles: InlineStyles | undefined;
+    let inlineStyles: Partial<InlineStyles> | undefined;
     if (options.inlineStyles) {
       if (typeof options.inlineStyles === 'object') {
         inlineStyles = options.inlineStyles;
@@ -122,23 +121,21 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
           g.op,
           this.state.converterOptions,
         );
-        return converter.getHtml();
+        return converter.renderNode().node;
       }
       // InlineGroup
       return this.renderInlines((group as InlineGroup).ops, true);
     });
   }
 
-  getListTag(op: DeltaInsertOp): string {
+  getListTag(op: DeltaInsertOp): keyof JSX.IntrinsicElements {
     return op.isOrderedList()
-      ? this.state.options.orderedListTag + ''
+      ? this.state.options.orderedListTag
       : op.isBulletList()
-        ? this.state.options.bulletListTag + ''
+        ? this.state.options.bulletListTag
         : op.isCheckedList()
-          ? this.state.options.bulletListTag + ''
-          : op.isUncheckedList()
-            ? this.state.options.bulletListTag + ''
-            : '';
+          ? this.state.options.bulletListTag
+          : this.state.options.bulletListTag;
   }
 
   getGroupedOps(): TDataGroup[] {
@@ -200,71 +197,53 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     return nestLists(groupTables(groupedOps));
   }
 
-  renderList(list: ListGroup): string {
-    var firstItem = list.items[0];
-    return (
-      makeStartTag(this.getListTag(firstItem.item.op)) +
-      list.items.map((li: ListItem) => this.renderListItem(li)).join('') +
-      makeEndTag(this.getListTag(firstItem.item.op))
-    );
+  private renderList(list: ListGroup): ReactNode {
+    const Tag = this.getListTag(list.items[0].item.op);
+    return <Tag>{list.items.map((li) => this.renderListItem(li))}</Tag>;
   }
 
-  renderListItem(li: ListItem): string {
+  renderListItem(li: ListItem): ReactNode {
     li.item.op.attributes.indent = 0;
-    var converter = new OpToHtmlConverter(
+    const converter = new OpToHtmlConverter(
       li.item.op,
       this.state.converterOptions,
     );
-    const parts = converter.renderNode();
-    const liElements = this.renderInlines(li.item.ops, false);
-    return parts.render(() => (
+    const { render } = converter.renderNode();
+    return render(
       <>
-        {liElements}
+        {this.renderInlines(li.item.ops, false)}
         {li.innerList && this.renderList(li.innerList)}
-      </>
-    ));
-  }
-
-  renderTable(table: TableGroup): string {
-    return (
-      makeStartTag('table') +
-      makeStartTag('tbody') +
-      table.rows.map((row: TableRow) => this.renderTableRow(row)).join('') +
-      makeEndTag('tbody') +
-      makeEndTag('table')
+      </>,
     );
   }
 
-  renderTableRow(row: TableRow): string {
+  private renderTable(table: TableGroup): ReactNode {
     return (
-      makeStartTag('tr') +
-      row.cells.map((cell: TableCell) => this.renderTableCell(cell)).join('') +
-      makeEndTag('tr')
+      <table>
+        <tbody>
+          <tr>
+            {table.rows.map((row) =>
+              row.cells.map((cell) => this.renderTableCell(cell)),
+            )}
+          </tr>
+        </tbody>
+      </table>
     );
   }
 
-  renderTableCell(cell: TableCell): string {
-    var converter = new OpToHtmlConverter(
+  private renderTableCell(cell: TableCell): ReactNode {
+    const converter = new OpToHtmlConverter(
       cell.item.op,
       this.state.converterOptions,
     );
-    var parts = converter.renderNode();
-    var cellElementsHtml = this.renderInlines(cell.item.ops, false);
+    const { render } = converter.renderNode();
+    const cellElements = this.renderInlines(cell.item.ops, false);
     return (
-      makeStartTag('td', [
-        {
-          key: 'data-row',
-          value: cell.item.op.attributes.table,
-        },
-      ]) +
-      parts.openingTag +
-      cellElementsHtml +
-      parts.closingTag +
-      makeEndTag('td')
+      <td data-row={cell.item.op.attributes.table}>{render(cellElements)}</td>
     );
   }
 
-  renderBlock(bop: DeltaInsertOp, ops: DeltaInsertOp[]) {
+  private renderBlock(bop: DeltaInsertOp, ops: DeltaInsertOp[]) {
     const converter = new OpToHtmlConverter(bop, this.state.converterOptions);
     const { render } = converter.renderNode();
 
@@ -280,10 +259,10 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     return render(inlines.length ? inlines : br);
   }
 
-  renderInlines(ops: DeltaInsertOp[], isInlineGroup = true) {
-    const opsLen = ops.length - 1;
+  private renderInlines(ops: DeltaInsertOp[], isInlineGroup = true): ReactNode {
+    const lastIndex = ops.length - 1;
     const html = ops.map((op, i) => {
-      if (i > 0 && i === opsLen && op.isJustNewline()) {
+      if (i > 0 && i === lastIndex && op.isJustNewline()) {
         return '';
       }
       return this.renderInline(op, null);
@@ -292,30 +271,42 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       return html;
     }
 
-    const startParaTag = makeStartTag(this.state.options.paragraphTag);
-    const endParaTag = makeEndTag(this.state.options.paragraphTag);
-    if (html === brTag || this.state.options.multiLineParagraph) {
-      return startParaTag + html + endParaTag;
+    const Tag = this.state.options.paragraphTag || 'p';
+
+    if (
+      (html.length === 1 && html[0] === br) ||
+      this.state.options.multiLineParagraph
+    ) {
+      return <Tag>{html}</Tag>;
     }
+
     return (
-      startParaTag +
-      html
-        .split(brTag)
-        .map((v) => v || brTag)
-        .join(endParaTag + startParaTag) +
-      endParaTag
+      <Tag>
+        {html.map((node, i) => (
+          <Fragment key={i}>{node === '' ? br : node}</Fragment>
+        ))}
+      </Tag>
     );
   }
 
-  renderInline(op: DeltaInsertOp, contextOp: DeltaInsertOp | null) {
+  private renderInline(
+    op: DeltaInsertOp,
+    contextOp: DeltaInsertOp | null,
+  ): ReactNode {
     if (op.isCustomEmbed()) {
       return this.renderCustom(op, contextOp);
     }
+    if (op.isJustNewline() && !op.isContainerBlock()) {
+      return newLine;
+    }
     const converter = new OpToHtmlConverter(op, this.state.converterOptions);
-    return converter.getHtml().replace(/\n/g, br);
+    const { node } = converter.renderNode();
+    return Array.isArray(node)
+      ? node.map((n) => (n === newLine ? br : n))
+      : node;
   }
 
-  renderCustom(
+  private renderCustom(
     _op: DeltaInsertOp,
     _contextOp: DeltaInsertOp | null,
   ): ReactNode {

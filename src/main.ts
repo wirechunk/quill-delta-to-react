@@ -1,12 +1,11 @@
-export { QuillDeltaToHtmlConverter } from './QuillDeltaToHtmlConverter.js';
-export { OpToHtmlConverter } from './OpToHtmlConverter.js';
+export { RenderDelta } from './render-delta.js';
 export {
-  InlineGroup,
-  VideoItem,
   BlockGroup,
+  BlotBlock,
+  InlineGroup,
   ListGroup,
   ListItem,
-  BlotBlock,
+  VideoItem,
 } from './grouper/group-types.js';
 export { DeltaInsertOp } from './DeltaInsertOp.js';
 export { InsertDataQuill, InsertDataCustom } from './InsertData.js';
@@ -18,4 +17,3 @@ export {
   DataType,
   GroupType,
 } from './value-types.js';
-export { newLine } from './constants.js';

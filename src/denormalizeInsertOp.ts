@@ -1,4 +1,4 @@
-import { DeltaInsertOpType } from './DeltaInsertOp.js';
+import type { DeltaInsertOpType } from './DeltaInsertOp.js';
 import { newLine } from './constants.js';
 
 /**
