@@ -1,27 +1,45 @@
-import { JSX, ReactNode } from 'react';
+import {
+  AnchorHTMLAttributes,
+  CSSProperties,
+  HTMLAttributes,
+  IframeHTMLAttributes,
+  ImgHTMLAttributes,
+  JSX,
+  ReactNode,
+} from 'react';
 import { DeltaInsertOp } from './DeltaInsertOp.js';
 import { ScriptType } from './value-types.js';
-import { Mention } from './mentions/MentionSanitizer.js';
 import { OpAttributes, OpAttributeSanitizer } from './OpAttributeSanitizer.js';
+import { Property } from 'csstype';
 
-export type InlineStyleType = (
-  value: string,
+export type InlineStyleFn = (
+  value: string | number,
   op: DeltaInsertOp,
-) => Partial<CSSStyleDeclaration> | undefined;
+) => Partial<CSSProperties> | undefined;
 
-export interface InlineStyles {
-  indent: InlineStyleType;
-  align: InlineStyleType;
-  direction: InlineStyleType;
-  font: InlineStyleType;
-  size: InlineStyleType;
-  [attribute: string]: InlineStyleType | undefined;
-}
+export type InlineStyles = {
+  indent: InlineStyleFn;
+  align: InlineStyleFn;
+  direction: InlineStyleFn;
+  font: InlineStyleFn;
+  size: InlineStyleFn;
+  video: InlineStyleFn;
+  [attribute: string]: InlineStyleFn | undefined;
+};
 
 const DEFAULT_INLINE_STYLES: Pick<
   InlineStyles,
-  'font' | 'size' | 'indent' | 'direction'
+  'direction' | 'font' | 'indent' | 'size' | 'video'
 > = {
+  direction: (value, op): Partial<CSSProperties> | undefined => {
+    if (value === 'rtl') {
+      return {
+        direction: 'rtl',
+        textAlign: op.attributes['align'] ? undefined : 'inherit',
+      };
+    }
+    return undefined;
+  },
   font: (value) => {
     switch (value) {
       case 'serif':
@@ -29,7 +47,9 @@ const DEFAULT_INLINE_STYLES: Pick<
       case 'monospace':
         return { fontFamily: 'Monaco, Courier New, monospace' };
       default:
-        return { fontFamily: value };
+        if (typeof value === 'string') {
+          return { fontFamily: value };
+        }
     }
   },
   size: (value) => {
@@ -44,21 +64,17 @@ const DEFAULT_INLINE_STYLES: Pick<
         return undefined;
     }
   },
-  indent: (value, op): Partial<CSSStyleDeclaration> => {
-    const indentSize = parseInt(value, 10) * 3;
+  indent: (value, op): Partial<CSSProperties> => {
+    const indentSize = Number(value) * 3;
     return {
       [op.attributes['direction'] === 'rtl' ? 'paddingRight' : 'paddingLeft']:
         `${indentSize}em`,
     };
   },
-  direction: (value, op): Partial<CSSStyleDeclaration> | undefined => {
-    if (value === 'rtl') {
-      return {
-        direction: 'rtl',
-        textAlign: op.attributes['align'] ? undefined : 'inherit',
-      };
-    }
-    return undefined;
+  video: (): Partial<CSSProperties> => {
+    return {
+      border: 'none',
+    };
   },
 };
 
@@ -83,8 +99,6 @@ const inlineTags = [
   'code',
 ] as const;
 
-type AttributeKeyValueTuple = [string, string | undefined];
-
 export type OpToNodeConverterOptions = {
   classPrefix?: string;
   inlineStyles?: boolean | Partial<InlineStyles>;
@@ -97,13 +111,12 @@ export type OpToNodeConverterOptions = {
     format: string,
     op: DeltaInsertOp,
   ) => keyof JSX.IntrinsicElements | undefined;
-  customAttributes?: (
+  customAttributes?: <Tag extends keyof JSX.IntrinsicElements>(
     op: DeltaInsertOp,
-  ) => { [key: string]: string | undefined } | undefined;
+    tag: Tag,
+  ) => HTMLAttributes<{}> | undefined;
   customClasses?: (op: DeltaInsertOp) => string | string[] | undefined;
-  customCssStyles?: (
-    op: DeltaInsertOp,
-  ) => Partial<CSSStyleDeclaration> | undefined;
+  customCssStyles?: (op: DeltaInsertOp) => Partial<CSSProperties> | undefined;
 };
 
 export type RenderNode = {
@@ -111,7 +124,7 @@ export type RenderNode = {
   node: ReactNode;
 };
 
-export class OpToHtmlConverter {
+export class RenderOp {
   private readonly options: OpToNodeConverterOptions;
   private readonly op: DeltaInsertOp;
 
@@ -144,15 +157,23 @@ export class OpToHtmlConverter {
       children = this.op.insert.value;
     }
 
+    const attributes = this.getTagAttributes(Tag);
+
+    let render: RenderNode['render'];
+
     if (Tag === 'img' && this.op.attributes.link) {
-      children = <a {...this.getLinkAttrs()}>{children}</a>;
+      render = (children) => (
+        <a {...this.getLinkAttrs()}>
+          <Tag {...attributes}>{children}</Tag>
+        </a>
+      );
+    } else {
+      render = (children) => <Tag {...attributes}>{children}</Tag>;
     }
 
-    const attributes = Object.fromEntries(this.getTagAttributes());
-
     return {
-      render: (children) => <Tag {...attributes}>{children}</Tag>,
-      node: <Tag {...attributes}>{children}</Tag>,
+      render,
+      node: render(children),
     };
   }
 
@@ -186,7 +207,7 @@ export class OpToHtmlConverter {
     );
   }
 
-  getCssStyles(): Partial<CSSStyleDeclaration> {
+  getCssStyles(): Partial<CSSProperties> {
     const { inlineStyles } = this.options;
 
     const propsArr: Array<keyof OpAttributes> = ['color'];
@@ -197,27 +218,31 @@ export class OpToHtmlConverter {
       propsArr.push('indent', 'align', 'direction', 'font', 'size');
     }
 
-    const styles: Partial<CSSStyleDeclaration> = {
+    const styles: Partial<CSSProperties> = {
       ...this.getCustomCssStyles(),
     };
 
     for (const attribute of propsArr) {
       const value: unknown = this.op.attributes[attribute];
-      if (typeof value === 'string') {
+      if (typeof value === 'string' || typeof value === 'number') {
         const attributeStyles =
           inlineStyles &&
           typeof inlineStyles === 'object' &&
           inlineStyles[attribute];
 
-        if (typeof attributeStyles === 'function') {
+        if (attributeStyles) {
           Object.assign(styles, attributeStyles(value, this.op));
         } else {
           switch (attribute) {
             case 'background':
-              styles.backgroundColor = value;
+              if (typeof value === 'string') {
+                styles.backgroundColor = value;
+              }
               break;
             case 'color':
-              styles.color = value;
+              if (typeof value === 'string') {
+                styles.color = value;
+              }
               break;
             case 'indent':
               Object.assign(
@@ -226,7 +251,9 @@ export class OpToHtmlConverter {
               );
               break;
             case 'align':
-              styles.textAlign = value;
+              if (typeof value === 'string') {
+                styles.textAlign = value as Property.TextAlign;
+              }
               break;
             case 'direction':
               Object.assign(
@@ -248,38 +275,39 @@ export class OpToHtmlConverter {
     return styles;
   }
 
-  getTagAttributes(): AttributeKeyValueTuple[] {
+  getTagAttributes<Tag extends keyof JSX.IntrinsicElements>(
+    tag: Tag,
+  ): HTMLAttributes<{}> {
     if (this.op.attributes.code && !this.op.isLink()) {
-      return [];
+      return {};
     }
 
-    const customAttributes = this.getCustomTagAttributes();
-
-    const tagAttrs: AttributeKeyValueTuple[] = customAttributes
-      ? Object.entries(customAttributes)
-      : [];
+    const tagAttrs: HTMLAttributes<{}> = {
+      ...this.options.customAttributes?.(this.op, tag),
+      style: this.getCssStyles(),
+    };
 
     const classes = this.getClasses();
     if (classes.length) {
-      tagAttrs.push(['class', classes.join(' ')]);
+      tagAttrs.className = classes.join(' ');
     }
 
     if (this.op.isImage()) {
+      const imgAttrs: ImgHTMLAttributes<HTMLImageElement> = {};
       if (this.op.attributes.width) {
-        tagAttrs.push(['width', this.op.attributes.width]);
+        imgAttrs.width = this.op.attributes.width;
       }
       const src = this.op.insert.value;
       if (typeof src === 'string') {
-        tagAttrs.push(['src', src]);
+        imgAttrs.src = src;
       }
+      Object.assign(tagAttrs, imgAttrs);
       return tagAttrs;
     }
 
     if (this.op.isACheckList()) {
-      tagAttrs.push([
-        'data-checked',
-        this.op.isCheckedList() ? 'true' : 'false',
-      ]);
+      // @ts-ignore
+      tagAttrs['data-checked'] = this.op.isCheckedList();
       return tagAttrs;
     }
 
@@ -288,75 +316,77 @@ export class OpToHtmlConverter {
     }
 
     if (this.op.isVideo()) {
-      tagAttrs.push(['frameborder', '0'], ['allowfullscreen', 'true']);
       const src = this.op.insert.value;
-      if (typeof src === 'string') {
-        tagAttrs.push(['src', src]);
-      }
+      const iframeAttrs: IframeHTMLAttributes<HTMLIFrameElement> = {
+        allowFullScreen: true,
+        src: typeof src === 'string' ? src : undefined,
+      };
+      Object.assign(tagAttrs, iframeAttrs);
       return tagAttrs;
     }
 
     if (this.op.isMentions()) {
-      var mention: Mention = this.op.attributes.mention!;
-      if (mention.class) {
-        tagAttrs.push(['class', mention.class]);
-      }
-      if (mention['end-point'] && mention.slug) {
-        tagAttrs.push(['href', mention['end-point'] + '/' + mention.slug]);
-      } else {
-        tagAttrs.push(['href', 'about:blank']);
-      }
-      if (mention.target) {
-        tagAttrs.push(['target', mention.target]);
+      const mention = this.op.attributes.mention;
+      if (mention) {
+        if (mention.class) {
+          const { className } = tagAttrs;
+          tagAttrs.className = className
+            ? `${className} ${mention.class}`
+            : mention.class;
+        }
+        const linkAttrs: AnchorHTMLAttributes<HTMLAnchorElement> = {};
+        if (mention.link) {
+          linkAttrs.href = mention.link;
+        }
+        if (mention.target) {
+          linkAttrs.target = mention.target;
+        }
+        Object.assign(tagAttrs, linkAttrs);
       }
       return tagAttrs;
-    }
-
-    const styles = this.getCssStyles();
-    if (styles.length) {
-      tagAttrs.push(['style', styles]);
     }
 
     if (
       this.op.isCodeBlock() &&
       typeof this.op.attributes['code-block'] === 'string'
     ) {
-      tagAttrs.push(['data-language', this.op.attributes['code-block']]);
+      // @ts-ignore
+      tagAttrs['data-language'] = this.op.attributes['code-block'];
       return tagAttrs;
     }
 
-    if (this.op.isContainerBlock()) {
-      return tagAttrs;
-    }
-
-    if (this.op.isLink()) {
-      tagAttrs.push(...this.getLinkAttrs());
+    if (!this.op.isContainerBlock() && this.op.isLink()) {
+      Object.assign(tagAttrs, this.getLinkAttrs());
     }
 
     return tagAttrs;
   }
 
-  getLinkAttrs() {
+  getLinkAttrs(): AnchorHTMLAttributes<HTMLAnchorElement> {
+    const attrs: AnchorHTMLAttributes<HTMLAnchorElement> = {
+      href: this.op.attributes.link,
+    };
+
     const target =
       this.op.attributes.target ||
-      (OpAttributeSanitizer.isValidTarget(this.options.linkTarget || '')
+      (this.options.linkTarget &&
+      OpAttributeSanitizer.isValidTarget(this.options.linkTarget)
         ? this.options.linkTarget
         : undefined);
 
+    if (target) {
+      attrs.target = target;
+    }
+
     const rel =
       this.op.attributes.rel ||
-      (OpAttributeSanitizer.IsValidRel(this.options.linkRel || '')
+      (this.options.linkRel &&
+      OpAttributeSanitizer.IsValidRel(this.options.linkRel)
         ? this.options.linkRel
         : undefined);
 
-    const attrs: AttributeKeyValueTuple[] = [
-      ['href', this.op.attributes.link!],
-    ];
-    if (target) {
-      attrs.push(['target', target]);
-    }
     if (rel) {
-      attrs.push(['rel', rel]);
+      attrs.rel = rel;
     }
 
     return attrs;
@@ -364,10 +394,6 @@ export class OpToHtmlConverter {
 
   getCustomTag(format: string) {
     return this.options.customTag?.apply(null, [format, this.op]);
-  }
-
-  getCustomTagAttributes() {
-    return this.options.customAttributes?.apply(null, [this.op]);
   }
 
   getCustomClasses() {
@@ -395,13 +421,11 @@ export class OpToHtmlConverter {
             'span';
     }
 
-    const attrs = this.op.attributes;
+    const { attributes } = this.op;
 
     // blocks
-    const paragraphTag = this.options.paragraphTag || 'p';
-
     for (const item of blockTags) {
-      if (attrs[item]) {
+      if (attributes[item]) {
         const customTag = this.getCustomTag(item);
         if (customTag) {
           return customTag;
@@ -414,7 +438,7 @@ export class OpToHtmlConverter {
           case 'list':
             return this.options.listItemTag || 'li';
           case 'header':
-            switch (attrs[item]?.toString()) {
+            switch (attributes[item]?.toString()) {
               case '1':
                 return 'h1';
               case '2':
@@ -433,18 +457,20 @@ export class OpToHtmlConverter {
           case 'align':
           case 'direction':
           case 'indent':
-            return paragraphTag;
+            return this.options.paragraphTag || 'p';
         }
       }
     }
 
     if (this.op.isCustomTextBlock()) {
-      return this.getCustomTag('renderAsBlock') || paragraphTag;
+      return (
+        this.getCustomTag('renderAsBlock') || this.options.paragraphTag || 'p'
+      );
     }
 
     // inlines
     for (const item of inlineTags) {
-      if (attrs[item]) {
+      if (attributes[item]) {
         const customTag = this.getCustomTag(item);
         if (customTag) {
           return customTag;
@@ -454,7 +480,7 @@ export class OpToHtmlConverter {
           case 'mentions':
             return 'a';
           case 'script':
-            return attrs[item] === ScriptType.Sub ? 'sub' : 'sup';
+            return attributes[item] === ScriptType.Sub ? 'sub' : 'sup';
           case 'bold':
             return 'strong';
           case 'italic':

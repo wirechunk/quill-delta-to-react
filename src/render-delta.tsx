@@ -1,8 +1,8 @@
 import {
   InlineStyles,
   OpToNodeConverterOptions,
-  OpToHtmlConverter,
-} from './op-to-node.js';
+  RenderOp,
+} from './render-op.js';
 import { DeltaInsertOp, isDeltaInsertOp } from './DeltaInsertOp.js';
 import { Grouper } from './grouper/Grouper.js';
 import {
@@ -16,7 +16,7 @@ import {
   TDataGroup,
   VideoItem,
 } from './grouper/group-types.js';
-import { nestLists } from './grouper/nestLists.js';
+import { nestLists } from './grouper/nest-lists.js';
 import {
   OpAttributeSanitizerOptions,
   OpAttributeSanitizer,
@@ -27,7 +27,7 @@ import { convertInsertValue } from './convert-insert-value.js';
 import { Component, Fragment, JSX, ReactNode } from 'react';
 import { br, newLine } from './constants.js';
 
-type RenderDeltaOptions = OpAttributeSanitizerOptions &
+export type RenderDeltaOptions = OpAttributeSanitizerOptions &
   OpToNodeConverterOptions & {
     orderedListTag: keyof JSX.IntrinsicElements;
     bulletListTag: keyof JSX.IntrinsicElements;
@@ -38,12 +38,12 @@ type RenderDeltaOptions = OpAttributeSanitizerOptions &
     multiLineCustomBlock: boolean;
   };
 
-type RenderDeltaProps = {
-  deltaOps: unknown[];
+export type RenderDeltaProps = {
+  ops: unknown[];
   options?: Partial<RenderDeltaOptions>;
 };
 
-type RenderDeltaState = {
+export type RenderDeltaState = {
   options: RenderDeltaOptions;
   converterOptions: OpToNodeConverterOptions;
 };
@@ -117,10 +117,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       }
       if (group instanceof VideoItem) {
         const g = group as VideoItem;
-        const converter = new OpToHtmlConverter(
-          g.op,
-          this.state.converterOptions,
-        );
+        const converter = new RenderOp(g.op, this.state.converterOptions);
         return converter.renderNode().node;
       }
       // InlineGroup
@@ -140,7 +137,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
 
   getGroupedOps(): TDataGroup[] {
     const deltaOps: DeltaInsertOp[] = [];
-    for (const unknownOp of this.props.deltaOps) {
+    for (const unknownOp of this.props.ops) {
       if (isDeltaInsertOp(unknownOp)) {
         const denormalizedOps = denormalizeInsertOp(unknownOp);
         for (const { insert, attributes } of denormalizedOps) {
@@ -165,10 +162,10 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     const groupedSameStyleBlocks = Grouper.groupConsecutiveSameStyleBlocks(
       Grouper.pairOpsWithTheirBlock(deltaOps),
       {
-        blockquotes: !!this.state.options.multiLineBlockquote,
-        header: !!this.state.options.multiLineHeader,
-        codeBlocks: !!this.state.options.multiLineCodeBlock,
-        customBlocks: !!this.state.options.multiLineCustomBlock,
+        blockquotes: this.state.options.multiLineBlockquote,
+        header: this.state.options.multiLineHeader,
+        codeBlocks: this.state.options.multiLineCodeBlock,
+        customBlocks: this.state.options.multiLineCustomBlock,
       },
     );
 
@@ -204,10 +201,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
 
   renderListItem(li: ListItem): ReactNode {
     li.item.op.attributes.indent = 0;
-    const converter = new OpToHtmlConverter(
-      li.item.op,
-      this.state.converterOptions,
-    );
+    const converter = new RenderOp(li.item.op, this.state.converterOptions);
     const { render } = converter.renderNode();
     return render(
       <>
@@ -232,10 +226,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
   }
 
   private renderTableCell(cell: TableCell): ReactNode {
-    const converter = new OpToHtmlConverter(
-      cell.item.op,
-      this.state.converterOptions,
-    );
+    const converter = new RenderOp(cell.item.op, this.state.converterOptions);
     const { render } = converter.renderNode();
     const cellElements = this.renderInlines(cell.item.ops, false);
     return (
@@ -244,7 +235,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
   }
 
   private renderBlock(bop: DeltaInsertOp, ops: DeltaInsertOp[]) {
-    const converter = new OpToHtmlConverter(bop, this.state.converterOptions);
+    const converter = new RenderOp(bop, this.state.converterOptions);
     const { render } = converter.renderNode();
 
     if (bop.isCodeBlock()) {
@@ -299,7 +290,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     if (op.isJustNewline() && !op.isContainerBlock()) {
       return newLine;
     }
-    const converter = new OpToHtmlConverter(op, this.state.converterOptions);
+    const converter = new RenderOp(op, this.state.converterOptions);
     const { node } = converter.renderNode();
     return Array.isArray(node)
       ? node.map((n) => (n === newLine ? br : n))

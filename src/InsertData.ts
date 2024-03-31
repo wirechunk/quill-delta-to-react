@@ -1,18 +1,17 @@
 import type { DataType } from './value-types.js';
 
 export class InsertDataQuill {
-  readonly type: DataType;
-  readonly value: string;
-  constructor(type: DataType, value: string) {
-    this.type = type;
-    this.value = value;
-  }
+  constructor(
+    readonly type: DataType,
+    readonly value: string,
+  ) {}
 }
 
 export class InsertDataCustom {
-  readonly type: string;
-  readonly value: any;
-  constructor(type: string, value: any) {
+  constructor(
+    readonly type: string,
+    readonly value: any,
+  ) {
     this.type = type;
     this.value = value;
   }

@@ -1,18 +1,6 @@
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-
-import {
-  preferSecond,
-  groupConsecutiveElementsWhile,
-} from '../../src/helpers/array.js';
-
-describe('preferSecond', () => {
-  it('should return second element in an array, otherwise first or null', () => {
-    assert.equal(preferSecond([1, 3]), 3);
-    assert.equal(preferSecond([5]), 5);
-    assert.equal(preferSecond([]), null);
-  });
-});
+import { groupConsecutiveElementsWhile } from '../../src/helpers/array.js';
 
 describe('groupConsecutiveElementsWhile', () => {
   it('should move consecutive elements matching predicate into an array (1)', () => {

@@ -4,8 +4,8 @@ import {
   DirectionType,
   ScriptType,
 } from './value-types.js';
-import { MentionSanitizer } from './mentions/MentionSanitizer.js';
-import type { Mention } from './mentions/MentionSanitizer.js';
+import { MentionSanitizer } from './MentionSanitizer.js';
+import type { Mention } from './MentionSanitizer.js';
 import type { OptionalAttributes } from 'quill';
 
 interface OpAttributes {
@@ -13,7 +13,7 @@ interface OpAttributes {
   color?: string | undefined;
   font?: string | undefined;
   size?: string | undefined;
-  width?: string | undefined;
+  width?: string | number | undefined;
 
   link?: string | undefined;
   bold?: boolean | undefined;
@@ -52,12 +52,13 @@ class OpAttributeSanitizer {
     dirtyAttrs: OptionalAttributes['attributes'],
     sanitizeOptions: OpAttributeSanitizerOptions,
   ): OpAttributes {
-    const cleanAttrs: any = {};
+    const cleanAttrs: OpAttributes = {};
 
     if (!dirtyAttrs || typeof dirtyAttrs !== 'object') {
       return cleanAttrs;
     }
-    let booleanAttrs = [
+
+    const booleanAttrs = [
       'bold',
       'italic',
       'underline',
@@ -66,11 +67,11 @@ class OpAttributeSanitizer {
       'blockquote',
       'code-block',
       'renderAsBlock',
-    ];
+    ] as const;
 
-    let colorAttrs = ['background', 'color'];
+    const colorAttrs = ['background', 'color'] as const;
 
-    let {
+    const {
       font,
       size,
       link,
@@ -86,9 +87,10 @@ class OpAttributeSanitizer {
       target,
       rel,
     } = dirtyAttrs;
-    let codeBlock = dirtyAttrs['code-block'];
 
-    let sanitizedAttrs = [
+    const codeBlock = dirtyAttrs['code-block'];
+
+    const sanitizedAttrs = [
       ...booleanAttrs,
       ...colorAttrs,
       'font',
@@ -107,20 +109,21 @@ class OpAttributeSanitizer {
       'rel',
       'code-block',
     ];
-    booleanAttrs.forEach(function (prop: string) {
-      var v = (<any>dirtyAttrs)[prop];
+
+    booleanAttrs.forEach((prop) => {
+      const v = dirtyAttrs[prop];
       if (v) {
         cleanAttrs[prop] = !!v;
       }
     });
 
-    colorAttrs.forEach(function (prop: string) {
-      var val = (<any>dirtyAttrs)[prop];
+    colorAttrs.forEach((prop) => {
+      const val: unknown = dirtyAttrs[prop];
       if (
-        val &&
-        (OpAttributeSanitizer.IsValidHexColor(val + '') ||
-          OpAttributeSanitizer.IsValidColorLiteral(val + '') ||
-          OpAttributeSanitizer.IsValidRGBColor(val + ''))
+        typeof val === 'string' &&
+        (OpAttributeSanitizer.IsValidHexColor(val) ||
+          OpAttributeSanitizer.IsValidColorLiteral(val) ||
+          OpAttributeSanitizer.IsValidRGBColor(val))
       ) {
         cleanAttrs[prop] = val;
       }
@@ -134,7 +137,11 @@ class OpAttributeSanitizer {
       cleanAttrs.size = size;
     }
 
-    if (width && OpAttributeSanitizer.IsValidWidth(width + '')) {
+    if (
+      width &&
+      (typeof width === 'number' || typeof width === 'string') &&
+      OpAttributeSanitizer.IsValidWidth(width + '')
+    ) {
       cleanAttrs.width = width;
     }
 

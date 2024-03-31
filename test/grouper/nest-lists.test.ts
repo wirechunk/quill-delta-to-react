@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
 
 import { Grouper } from './../../src/grouper/Grouper.js';
-import { nestLists } from '../../src/grouper/nestLists.js';
+import { nestLists } from '../../src/grouper/nest-lists.js';
 import { DeltaInsertOp } from './../../src/DeltaInsertOp.js';
 import {
   ListGroup,

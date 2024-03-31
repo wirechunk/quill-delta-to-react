@@ -1,5 +1,5 @@
 import { ListType, DataType } from './value-types.js';
-import { OpAttributes } from './OpAttributeSanitizer.js';
+import type { OpAttributes } from './OpAttributeSanitizer.js';
 import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import isEqual from 'lodash.isequal';
 import { newLine } from './constants.js';
@@ -9,19 +9,17 @@ const isNonNullObject = (obj: unknown): obj is Record<string, unknown> =>
 
 export type DeltaInsertOpType = {
   insert: string | Record<string, unknown>;
-  attributes?: OpAttributes | null;
+  attributes?: Record<string, unknown> | null;
 };
 
-export const isDeltaInsertOp = (op: unknown): op is DeltaInsertOpType => {
-  return (
-    !!op &&
-    typeof op === 'object' &&
-    (typeof (op as DeltaInsertOpType).insert === 'string' ||
-      isNonNullObject((op as DeltaInsertOpType).insert)) &&
-    (!(op as DeltaInsertOpType).attributes ||
-      typeof (op as DeltaInsertOpType).attributes === 'object')
-  );
-};
+// A basic structural check.
+export const isDeltaInsertOp = (op: unknown): op is DeltaInsertOpType =>
+  !!op &&
+  typeof op === 'object' &&
+  (typeof (op as DeltaInsertOpType).insert === 'string' ||
+    isNonNullObject((op as DeltaInsertOpType).insert)) &&
+  (!(op as DeltaInsertOpType).attributes ||
+    typeof (op as DeltaInsertOpType).attributes === 'object');
 
 export class DeltaInsertOp {
   readonly insert: InsertData;

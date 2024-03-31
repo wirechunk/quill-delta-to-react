@@ -1,15 +1,14 @@
-import type { OpAttributeSanitizerOptions } from './../OpAttributeSanitizer.js';
+import type { OpAttributeSanitizerOptions } from './OpAttributeSanitizer.js';
 
-export interface Mention {
-  [index: string]: string | undefined;
+// See https://github.com/quill-mention/quill-mention
+export type Mention = {
   name?: string;
   target?: string;
   slug?: string;
   class?: string;
-  avatar?: string;
-  id?: string;
-  'end-point'?: string;
-}
+  link?: string;
+  [index: string]: unknown;
+};
 
 type UnknownDirtyMention = {
   [key in keyof Mention]?: unknown;
@@ -37,27 +36,14 @@ export class MentionSanitizer {
     }
 
     if (
-      typeof dirtyObj.id === 'string' &&
-      MentionSanitizer.isValidId(dirtyObj.id)
-    ) {
-      cleanObj.id = dirtyObj.id;
-    }
-
-    if (
       typeof dirtyObj.target === 'string' &&
       MentionSanitizer.isValidTarget(dirtyObj.target)
     ) {
       cleanObj.target = dirtyObj.target;
     }
 
-    if (typeof dirtyObj.avatar === 'string') {
-      cleanObj.avatar = sanitizeOptions.urlSanitizer(dirtyObj.avatar);
-    }
-
-    if (typeof dirtyObj['end-point'] === 'string') {
-      cleanObj['end-point'] = sanitizeOptions.urlSanitizer(
-        dirtyObj['end-point'],
-      );
+    if (typeof dirtyObj.link === 'string') {
+      cleanObj.link = sanitizeOptions.urlSanitizer(dirtyObj.link);
     }
 
     if (typeof dirtyObj.slug === 'string') {
@@ -69,10 +55,6 @@ export class MentionSanitizer {
 
   private static isValidClass(classAttr: string) {
     return !!classAttr.match(/^[a-zA-Z0-9_\-]{1,500}$/i);
-  }
-
-  private static isValidId(idAttr: string) {
-    return !!idAttr.match(/^[a-zA-Z0-9_\-:.]{1,500}$/i);
   }
 
   private static isValidTarget(target: string) {

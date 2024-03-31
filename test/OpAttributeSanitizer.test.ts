@@ -1,7 +1,9 @@
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-
-import { OpAttributeSanitizer } from './../src/OpAttributeSanitizer.js';
+import {
+  OpAttributeSanitizer,
+  OpAttributeSanitizerOptions,
+} from './../src/OpAttributeSanitizer.js';
 import { ListType, AlignType, DirectionType } from './../src/value-types.js';
 
 describe('OpAttributeSanitizer', function () {
@@ -95,14 +97,12 @@ describe('OpAttributeSanitizer', function () {
     });
   });
 
-  describe('#sanitize()', function () {
-    it('should return empty object', function () {
-      [null, 3, undefined, 'fd'].forEach((v) => {
-        assert.deepEqual(OpAttributeSanitizer.sanitize(<any>v, {}), {});
-      });
-    });
+  describe('sanitize', function () {
+    const noopSanitizeOptions: OpAttributeSanitizerOptions = {
+      urlSanitizer: (url) => url,
+    };
 
-    var attrs = {
+    const attrs = {
       bold: 'nonboolval',
       color: '#12345H',
       background: '#333',
@@ -123,66 +123,91 @@ describe('OpAttributeSanitizer', function () {
         id: 'An-id_9:.',
         target: '_blank',
         avatar: 'http://www.yahoo.com',
-        'end-point': 'http://abc.com',
         slug: 'my-name',
       },
     };
-    it('should return sanitized attributes', function () {
-      assert.deepEqual(OpAttributeSanitizer.sanitize(<any>attrs, {}), {
-        bold: true,
-        background: '#333',
-        font: 'times new roman',
-        link: 'http://&lt;',
-        list: 'ordered',
-        header: 3,
-        indent: 30,
-        direction: 'rtl',
-        align: 'center',
-        width: '3',
-        customAttr1: 'shouldnt be touched',
-        mentions: true,
-        mention: {
-          class: 'A-cls-9',
-          id: 'An-id_9:.',
-          target: '_blank',
-          avatar: 'http://www.yahoo.com',
-          'end-point': 'http://abc.com',
-          slug: 'my-name',
+
+    it('should return sanitized attributes', () => {
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize(attrs, noopSanitizeOptions),
+        {
+          bold: true,
+          background: '#333',
+          font: 'times new roman',
+          link: 'http://&lt;',
+          list: 'ordered',
+          header: 3,
+          indent: 30,
+          direction: 'rtl',
+          align: 'center',
+          width: '3',
+          customAttr1: 'shouldnt be touched',
+          mentions: true,
+          mention: {
+            class: 'A-cls-9',
+            id: 'An-id_9:.',
+            target: '_blank',
+            avatar: 'http://www.yahoo.com',
+            slug: 'my-name',
+          },
         },
-      });
+      );
 
       assert.deepEqual(
         OpAttributeSanitizer.sanitize(
-          <any>{
+          {
             mentions: true,
             mention: 1,
           },
-          {},
+          noopSanitizeOptions,
         ),
         {},
       );
 
-      assert.deepEqual(OpAttributeSanitizer.sanitize({ header: 1 }, {}), {
-        header: 1,
-      });
       assert.deepEqual(
-        OpAttributeSanitizer.sanitize({ header: undefined }, {}),
+        OpAttributeSanitizer.sanitize({ header: 1 }, noopSanitizeOptions),
+        {
+          header: 1,
+        },
+      );
+
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize(
+          { header: undefined },
+          noopSanitizeOptions,
+        ),
         {},
       );
-      assert.deepEqual(OpAttributeSanitizer.sanitize({ header: 100 }, {}), {
-        header: 6,
-      });
+
       assert.deepEqual(
-        OpAttributeSanitizer.sanitize({ align: AlignType.Center }, {}),
+        OpAttributeSanitizer.sanitize({ header: 100 }, noopSanitizeOptions),
+        {
+          header: 6,
+        },
+      );
+
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize(
+          { align: AlignType.Center },
+          noopSanitizeOptions,
+        ),
         { align: 'center' },
       );
+
       assert.deepEqual(
-        OpAttributeSanitizer.sanitize({ direction: DirectionType.Rtl }, {}),
+        OpAttributeSanitizer.sanitize(
+          { direction: DirectionType.Rtl },
+          noopSanitizeOptions,
+        ),
         { direction: 'rtl' },
       );
-      assert.deepEqual(OpAttributeSanitizer.sanitize({ indent: 2 }, {}), {
-        indent: 2,
-      });
+
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize({ indent: 2 }, noopSanitizeOptions),
+        {
+          indent: 2,
+        },
+      );
     });
   });
 });
