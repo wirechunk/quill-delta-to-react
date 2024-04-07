@@ -398,7 +398,7 @@ describe('RenderDelta', () => {
 
       describe('overriding paragraphTag', () => {
         const ops = [
-          { insert: 'mr' },
+          { insert: 'hey' },
           { insert: '\n', attributes: { align: 'center' } },
           { insert: '\n', attributes: { direction: 'rtl' } },
           { insert: '\n', attributes: { indent: 2 } },
@@ -410,17 +410,19 @@ describe('RenderDelta', () => {
             options: { paragraphTag: 'div' },
           });
           const html = renderToString(rd.render());
+          assert.equal(html.includes('hey'), true);
           assert.equal(html.includes('<div class="ql-align'), true);
           assert.equal(html.includes('<div class="ql-direction'), true);
-          assert.equal(html.includes('<div class="ql-indent'), true);
+          assert.equal(html.includes('<div class="ql-indent-2'), true);
         });
 
         it('should render with the default p tag', () => {
           const rd = new RenderDelta({ ops });
           const html = renderToString(rd.render());
+          assert.equal(html.includes('hey'), true);
           assert.equal(html.includes('<p class="ql-align'), true);
           assert.equal(html.includes('<p class="ql-direction'), true);
-          assert.equal(html.includes('<p class="ql-indent'), true);
+          assert.equal(html.includes('<p class="ql-indent-2'), true);
         });
       });
 
@@ -463,7 +465,7 @@ describe('RenderDelta', () => {
       });
 
       it('should convert using custom url sanitizer', () => {
-        let ops = [
+        const ops = [
           { attributes: { link: 'http://yahoo<%=abc%>/ed' }, insert: 'test' },
           { attributes: { link: 'http://abc<' }, insert: 'hi' },
         ];
@@ -471,20 +473,17 @@ describe('RenderDelta', () => {
         const rd = new RenderDelta({
           ops,
           options: {
-            urlSanitizer: (link) => {
-              if (link.includes('<%')) {
-                return link;
+            urlSanitizer: (url) => {
+              if (url.includes('<%')) {
+                return 'REDACTED';
               }
-              return 'REDACTED';
+              return url;
             },
           },
         });
         assert.equal(
           renderToString(rd.render()),
-          [
-            `<p><a href="REDACTED" target="_blank">test</a>`,
-            `<a href="http://abc&lt;" target="_blank">hi</a></p>`,
-          ].join(''),
+          '<p><a href="REDACTED" target="_blank">test</a><a href="http://abc&lt;" target="_blank">hi</a></p>',
         );
       });
 

@@ -29,13 +29,18 @@ export type InlineStyles = {
 
 const DEFAULT_INLINE_STYLES: Pick<
   InlineStyles,
-  'direction' | 'font' | 'indent' | 'size' | 'video'
+  'direction' | 'font' | 'indent' | 'size'
 > = {
   direction: (value, op): CSSProperties | undefined => {
     if (value === 'rtl') {
+      if (op.attributes['align']) {
+        return {
+          direction: 'rtl',
+        };
+      }
       return {
         direction: 'rtl',
-        textAlign: op.attributes['align'] ? undefined : 'inherit',
+        textAlign: 'inherit',
       };
     }
     return undefined;
@@ -69,11 +74,6 @@ const DEFAULT_INLINE_STYLES: Pick<
     return {
       [op.attributes['direction'] === 'rtl' ? 'paddingRight' : 'paddingLeft']:
         `${indentSize}em`,
-    };
-  },
-  video: (): CSSProperties => {
-    return {
-      border: 'none',
     };
   },
 };
@@ -169,12 +169,16 @@ export class RenderOp {
 
     let render: RenderNode['render'];
 
-    if (Tag === 'img' && this.op.attributes.link) {
-      render = (children) => (
-        <a {...this.getLinkAttrs()}>
-          <Tag {...attributes}>{children}</Tag>
-        </a>
-      );
+    if (Tag === 'img') {
+      if (this.op.attributes.link) {
+        render = () => (
+          <a {...this.getLinkAttrs()}>
+            <Tag {...attributes} />
+          </a>
+        );
+      } else {
+        render = () => <Tag {...attributes} />;
+      }
     } else {
       render = (children) => <Tag {...attributes}>{children}</Tag>;
     }
@@ -227,6 +231,8 @@ export class RenderOp {
     }
 
     const styles: CSSProperties = {
+      // Set border to none for video embeds but allow custom styles to override this.
+      ...(this.op.isVideo() ? { border: 'none' } : {}),
       ...this.getCustomCssStyles(),
     };
 
@@ -294,8 +300,12 @@ export class RenderOp {
 
     const tagAttrs: HTMLAttributes = {
       ...this.options.customAttributes?.(this.op, tag),
-      style: this.getCssStyles(),
     };
+
+    const style = this.getCssStyles();
+    if (Object.keys(style).length) {
+      tagAttrs.style = style;
+    }
 
     const classes = this.getClasses();
     if (classes.length) {

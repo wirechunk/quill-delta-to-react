@@ -29,7 +29,7 @@
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "typecheck": "./node_modules/typescript/bin/tsc --project ./tsconfig.test.json --noEmit",
-    "test": "node --loader ts-node/esm --test  test/*.test.ts test/**/*.test.ts"
+    "test": "node --loader ts-node/esm --test  test/*.test.ts test/**/*.test.ts test/*.test.tsx"
   },
   "repository": {
     "type": "git",
@@ -38,7 +38,8 @@
   "keywords": [
     "quill",
     "delta",
-    "html"
+    "html",
+    "react"
   ],
   "author": "Nihat Özer <nihatforweb@gmail.com>",
   "license": "ISC",

@@ -130,7 +130,10 @@ describe('OpToHtmlConverter', () => {
         attrs,
       );
       const ro = new RenderOp(op, { inlineStyles: {} });
-      assert.deepEqual(ro.getCssStyles(), expectedStyles);
+      assert.deepEqual(ro.getCssStyles(), {
+        ...expectedStyles,
+        border: 'none',
+      });
     });
 
     it('should return inline styles for a formula', () => {
@@ -176,8 +179,8 @@ describe('OpToHtmlConverter', () => {
       const op = new DeltaInsertOp('f', { size: 'huge' });
       const ro = new RenderOp(op, {
         inlineStyles: {
-          size: (value, op) =>
-            value === 'f' && op.attributes.size === 'huge'
+          size: (value) =>
+            value === 'huge'
               ? {
                   fontSize: '6em',
                 }
@@ -191,7 +194,7 @@ describe('OpToHtmlConverter', () => {
       const op = new DeltaInsertOp('f', { font: 'monospace' });
       const ro = new RenderOp(op, { inlineStyles: {} });
       assert.deepEqual(ro.getCssStyles(), {
-        fontFamily: 'Monaco, Courier New, monospace -- testing sanity check', // santity check is temp
+        fontFamily: 'Monaco, Courier New, monospace',
       });
     });
 
@@ -453,6 +456,9 @@ describe('OpToHtmlConverter', () => {
       const ro = new RenderOp(op);
       assert.deepEqual(ro.getTagAttributes('span'), {
         className: 'ql-formula',
+        style: {
+          color: 'red',
+        },
       });
     });
 
@@ -468,6 +474,10 @@ describe('OpToHtmlConverter', () => {
         className: 'ql-video',
         allowFullScreen: true,
         src: 'https://example.com/video.mp4',
+        style: {
+          border: 'none',
+          color: 'red',
+        },
       });
     });
 
@@ -478,8 +488,10 @@ describe('OpToHtmlConverter', () => {
       });
       const ro = new RenderOp(op);
       assert.deepEqual(ro.getTagAttributes('a'), {
-        className: 'ql-link',
         href: 'https://example.com/hello',
+        style: {
+          color: 'red',
+        },
       });
     });
 
@@ -490,9 +502,11 @@ describe('OpToHtmlConverter', () => {
       });
       const ro = new RenderOp(op, { linkRel: 'nofollow' });
       assert.deepEqual(ro.getTagAttributes('a'), {
-        className: 'ql-link',
         href: 'https://example.com/hello',
         rel: 'nofollow',
+        style: {
+          color: 'red',
+        },
       });
     });
 
@@ -524,13 +538,24 @@ describe('OpToHtmlConverter', () => {
         const ro = new RenderOp(new DeltaInsertOp('aaa', attributes));
         assert.equal(
           renderToString(ro.renderNode().node),
-          `<a class="ql-font-verdana ql-size-small" style="color:red;background-color:#fff" href="https://example.com/hello"><sup><strong><em><s><u>aaa</u></s></em></strong></sup></a>`,
+          `<a style="color:red;background-color:#fff" class="ql-font-verdana ql-size-small" href="https://example.com/hello"><sup><strong><em><s><u>aaa</u></s></em></strong></sup></a>`,
         );
       });
 
       it('should return proper HTML content for a paragraph', () => {
         const ro = new RenderOp(new DeltaInsertOp('aa', { indent: 1 }));
-        assert.equal(renderToString(ro.renderNode().node), '');
+        assert.equal(
+          renderToString(ro.renderNode().node),
+          // This is empty because we have an indent attribute, which makes this a block, and we should
+          // be using the render method to actually render it.
+          '<p class="ql-indent-1"></p>',
+        );
+
+        // Sanity check:
+        assert.equal(
+          renderToString(ro.renderNode().render('something')),
+          '<p class="ql-indent-1">something</p>',
+        );
       });
 
       it('should return proper HTML content for a blockquote', () => {
@@ -539,7 +564,8 @@ describe('OpToHtmlConverter', () => {
         );
         assert.equal(
           renderToString(ro.renderNode().node),
-          '<blockquote>hello</blockquote>',
+          // See the above test for why this is empty.
+          '<blockquote></blockquote>',
         );
       });
 
@@ -582,7 +608,7 @@ describe('OpToHtmlConverter', () => {
         );
         assert.equal(
           renderToString(ro.renderNode().node),
-          `<iframe class="ql-video" src="https://example.com/vid1.mp4" allowfullscreen style="border:none"></iframe>`,
+          `<iframe style="border:none" class="ql-video" allowfullscreen="" src="https://example.com/vid1.mp4"></iframe>`,
         );
       });
     });
@@ -592,8 +618,7 @@ describe('OpToHtmlConverter', () => {
         const op = new DeltaInsertOp('hello');
         const ro = new RenderOp(op);
         const { render } = ro.renderNode();
-        const got = render('something');
-        assert.equal(got, '<p>something</p>');
+        assert.equal(renderToString(render('something')), '<p>something</p>');
       });
 
       it('should wrap its argument with attributes', () => {
@@ -611,12 +636,12 @@ describe('OpToHtmlConverter', () => {
         });
         const { render } = ro.renderNode();
         assert.equal(
-          render('something'),
-          '<span class="ql-bold" style="color:red" data-custom>something</span>',
+          renderToString(render('something')),
+          '<strong style="color:red" data-custom>something</strong>',
         );
       });
 
-      it('should wrap its argument with an image link', () => {
+      it('should ignore children for an image', () => {
         const op = new DeltaInsertOp(
           new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
         );
@@ -625,8 +650,25 @@ describe('OpToHtmlConverter', () => {
         });
         const { render } = ro.renderNode();
         assert.equal(
-          render('something'),
+          renderToString(render('something')),
           '<img class="my-img ql-image" src="https://example.com/hello.png"/>',
+        );
+      });
+
+      it('should ignore children for an image link', () => {
+        const op = new DeltaInsertOp(
+          new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
+          {
+            link: 'https://example.com/hello',
+          },
+        );
+        const ro = new RenderOp(op, {
+          customClasses: () => 'my-img',
+        });
+        const { render } = ro.renderNode();
+        assert.equal(
+          renderToString(render('something')),
+          '<a href="https://example.com/hello"><img class="my-img ql-image" src="https://example.com/hello.png"/></a>',
         );
       });
     });
