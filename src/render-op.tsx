@@ -359,7 +359,6 @@ export class RenderOp {
       this.op.isCodeBlock() &&
       typeof this.op.attributes['code-block'] === 'string'
     ) {
-      // @ts-ignore
       tagAttrs['data-language'] = this.op.attributes['code-block'];
       return tagAttrs;
     }

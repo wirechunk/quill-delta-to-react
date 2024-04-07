@@ -38,9 +38,15 @@ export type RenderDeltaOptions = OpAttributeSanitizerOptions &
     multiLineCustomBlock: boolean;
   };
 
+export type CustomRenderer = (
+  op: DeltaInsertOp,
+  contextOp: DeltaInsertOp | null,
+) => ReactNode;
+
 export type RenderDeltaProps = {
   ops: unknown[];
   options?: Partial<RenderDeltaOptions>;
+  customRenderer?: CustomRenderer;
 };
 
 export type RenderDeltaState = {
@@ -298,10 +304,9 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
   }
 
   private renderCustom(
-    _op: DeltaInsertOp,
-    _contextOp: DeltaInsertOp | null,
+    op: DeltaInsertOp,
+    contextOp: DeltaInsertOp | null,
   ): ReactNode {
-    // TODO
-    return null;
+    return this.props.customRenderer?.(op, contextOp) ?? null;
   }
 }
