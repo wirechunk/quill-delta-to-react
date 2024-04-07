@@ -1,47 +1,66 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
-import { RenderOp } from '../src/render-op.js';
+import { OpToNodeConverterOptions, RenderOp } from '../src/render-op.js';
 import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
 import { InsertDataQuill } from '../src/InsertData.js';
 import {
-  ScriptType,
-  DirectionType,
   AlignType,
   DataType,
+  DirectionType,
+  ScriptType,
 } from '../src/value-types.js';
-import { RenderDeltaOptions } from '../src/render-delta.js';
+import type { CSSProperties } from 'react';
+import type { OpAttributes } from '../src/OpAttributeSanitizer.js';
+import { renderToString } from 'react-dom/server';
 
 describe('OpToHtmlConverter', () => {
   describe('constructor', () => {
-    var op = new DeltaInsertOp('hello');
-    it('should instantiate', () => {
-      const ro = new RenderOp(op);
-      assert.ok(ro instanceof RenderOp);
+    it('should set default options', () => {
+      const ro = new RenderOp(new DeltaInsertOp('hello'));
+
+      assert.equal(ro.prefixClass(''), 'ql-');
     });
   });
 
   describe('prefixClass', () => {
-    it('should prefix class if an empty string prefix is not given', () => {
-      var op = new DeltaInsertOp('aa');
-      var c = new RenderOp(op, { classPrefix: '' });
-      var act = c.prefixClass('my-class');
-      assert.equal(act, 'my-class');
+    it('should not prefix a class with an empty prefix option', () => {
+      const ro = new RenderOp(new DeltaInsertOp('aa'), { classPrefix: '' });
+      assert.equal(ro.prefixClass('my-class'), 'my-class');
+    });
 
-      c = new RenderOp(op, { classPrefix: 'xx' });
-      act = c.prefixClass('my-class');
-      assert.equal(act, 'xx-my-class');
+    it('should prefix class with a non-empty prefix', () => {
+      const ro = new RenderOp(new DeltaInsertOp('aa'), { classPrefix: 'xx' });
+      assert.equal(ro.prefixClass('my-class'), 'xx-my-class');
+    });
 
-      c = new RenderOp(op);
-      act = c.prefixClass('my-class');
-      assert.equal(act, 'ql-my-class');
+    it('should prefix class with the default with no prefix specified', () => {
+      const ro = new RenderOp(new DeltaInsertOp('aa'));
+      assert.equal(ro.prefixClass('my-class'), 'ql-my-class');
     });
   });
 
   describe('getCssStyles', () => {
-    var op = new DeltaInsertOp('hello');
-    it('should return styles', () => {
-      var c = new RenderOp(op);
-      assert.deepEqual(c.getCssStyles(), []);
+    const attrs: OpAttributes = {
+      indent: 1,
+      align: AlignType.Center,
+      direction: DirectionType.Rtl,
+      font: 'roman',
+      size: 'small',
+      background: 'red',
+    };
+
+    const expectedStyles: CSSProperties = {
+      backgroundColor: 'red',
+      paddingRight: '3em',
+      textAlign: 'center',
+      direction: 'rtl',
+      fontFamily: 'roman',
+      fontSize: '0.75em',
+    };
+
+    it('should return an empty object when there are no styles', () => {
+      const ro = new RenderOp(new DeltaInsertOp('hello'));
+      assert.deepEqual(ro.getCssStyles(), {});
     });
 
     it('should return custom styles for a custom attribute', () => {
@@ -71,8 +90,8 @@ describe('OpToHtmlConverter', () => {
     });
 
     it('should return custom styles for a custom attribute and the background attribute', () => {
-      const o = new DeltaInsertOp('f', { background: 'red', attr1: 'green' });
-      const ro = new RenderOp(o, {
+      const op = new DeltaInsertOp('f', { attr1: 'green', background: 'red' });
+      const ro = new RenderOp(op, {
         customCssStyles: (op) => {
           const value = op.attributes['attr1'];
           if (value) {
@@ -89,220 +108,256 @@ describe('OpToHtmlConverter', () => {
       });
     });
 
-    it('should return inline styles', function () {
-      var op = new DeltaInsertOp('hello');
-      var c = new RenderOp(op, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), []);
+    it('should return inline styles for an inline insert', () => {
+      const ro = new RenderOp(new DeltaInsertOp('hello', attrs), {
+        inlineStyles: {},
+      });
+      assert.deepEqual(ro.getCssStyles(), expectedStyles);
+    });
 
-      var attrs = {
-        indent: 1,
-        align: AlignType.Center,
-        direction: DirectionType.Rtl,
-        font: 'roman',
-        size: 'small',
-        background: 'red',
-      };
-      var o = new DeltaInsertOp('f', attrs);
-      c = new RenderOp(o, { inlineStyles: {} });
-      var styles = [
-        'background-color:red',
-        'padding-right:3em',
-        'text-align:center',
-        'direction:rtl',
-        'font-family:roman',
-        'font-size: 0.75em',
-      ];
-      assert.deepEqual(c.getCssStyles(), styles);
+    it('should return inline styles for an image', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Image, ''),
+        attrs,
+      );
+      const ro = new RenderOp(op, { inlineStyles: {} });
+      assert.deepEqual(ro.getCssStyles(), expectedStyles);
+    });
 
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), attrs);
-      c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), styles);
+    it('should return inline styles for a video', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Video, ''),
+        attrs,
+      );
+      const ro = new RenderOp(op, { inlineStyles: {} });
+      assert.deepEqual(ro.getCssStyles(), expectedStyles);
+    });
 
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Video, ''), attrs);
-      c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), styles);
+    it('should return inline styles for a formula', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Formula, ''),
+        attrs,
+      );
+      const ro = new RenderOp(op, { inlineStyles: {} });
+      assert.deepEqual(ro.getCssStyles(), expectedStyles);
+    });
 
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, ''), attrs);
-      c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), styles);
-
-      o = new DeltaInsertOp('f', attrs);
-      c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), styles);
-
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), {
+    it('should return the styling for RTL', () => {
+      const op = new DeltaInsertOp('f', {
         direction: DirectionType.Rtl,
       });
-      c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), ['direction:rtl; text-align:inherit']);
+      const ro = new RenderOp(op, { inlineStyles: {} });
+      assert.deepEqual(ro.getCssStyles(), {
+        direction: 'rtl',
+        textAlign: 'inherit',
+      });
+    });
 
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), {
+    it('should return padding styling', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), {
         indent: 2,
       });
-      c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), ['padding-left:6em']);
+      const ro = new RenderOp(op, { inlineStyles: {} });
+      assert.deepEqual(ro.getCssStyles(), {
+        paddingLeft: '6em',
+      });
+    });
 
-      // Ignore invalid direction
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), {
+    it('should ignore an invalid direction', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), {
+        // @ts-expect-error
         direction: 'ltr',
-      } as any);
-      c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), []);
+      });
+      const ro = new RenderOp(op);
+      assert.deepEqual(ro.getCssStyles(), {});
     });
 
     it('should allow setting inline styles', () => {
-      var op = new DeltaInsertOp('f', { size: 'huge' });
-      var c = new RenderOp(op, {
+      const op = new DeltaInsertOp('f', { size: 'huge' });
+      const ro = new RenderOp(op, {
         inlineStyles: {
-          size: {
-            huge: 'font-size: 6em',
-          },
+          size: (value, op) =>
+            value === 'f' && op.attributes.size === 'huge'
+              ? {
+                  fontSize: '6em',
+                }
+              : undefined,
         },
       });
-      assert.deepEqual(c.getCssStyles(), ['font-size: 6em']);
+      assert.deepEqual(ro.getCssStyles(), { fontSize: '6em' });
     });
 
     it('should render default font inline styles', () => {
       const op = new DeltaInsertOp('f', { font: 'monospace' });
-      const c = new RenderOp(op, { inlineStyles: {} });
-      assert.deepEqual(c.getCssStyles(), {
-        fontFamily: 'Monaco, Courier New, monospace -- testing sanity check',
+      const ro = new RenderOp(op, { inlineStyles: {} });
+      assert.deepEqual(ro.getCssStyles(), {
+        fontFamily: 'Monaco, Courier New, monospace -- testing sanity check', // santity check is temp
       });
     });
 
     it('should return nothing for an inline style with no mapped entry', function () {
-      const op = new DeltaInsertOp('f', { size: 'biggest' });
-      const ro = new RenderOp(op, {
+      const ro = new RenderOp(new DeltaInsertOp('f', { size: 'biggest' }), {
         inlineStyles: {
           somethingElse: () => ({
             fontSize: '0.75em',
           }),
         },
       });
-      assert.deepEqual(ro.getCssStyles(), []);
+      assert.deepEqual(ro.getCssStyles(), {});
     });
 
-    it('should return nothing for an inline style where the converter returns undefined', function () {
-      var op = new DeltaInsertOp('f', { size: 'biggest' });
-      var c = new RenderOp(op, {
+    it('should return nothing for an inline style where the custom styling function returns undefined', function () {
+      const ro = new RenderOp(new DeltaInsertOp('f', { size: 'biggest' }), {
         inlineStyles: {
           size: () => undefined,
         },
       });
-      assert.deepEqual(c.getCssStyles(), []);
+      assert.deepEqual(ro.getCssStyles(), {});
     });
   });
 
-  describe('getClasses', function () {
-    it('should return prefixed classes', () => {
-      const op = new DeltaInsertOp('hello');
-      const options: Partial<RenderDeltaOptions> = {
-        customClasses: (op) => {
-          if (op.attributes.size === 'small') {
-            return ['small-size'];
-          }
-        },
-      };
-      var c = new RenderOp(op, options);
-      assert.deepEqual(c.getClasses(), []);
+  describe('getClasses', () => {
+    const options: Partial<OpToNodeConverterOptions> = {
+      customClasses: (op) => {
+        if (op.attributes.size === 'small') {
+          return ['small-size'];
+        }
+      },
+    };
 
-      var attrs = {
-        indent: 1,
-        align: AlignType.Center,
-        direction: DirectionType.Rtl,
-        font: 'roman',
-        size: 'small',
-        background: 'red',
-      };
-      var o = new DeltaInsertOp('f', attrs);
-      c = new RenderOp(o, options);
-      var classes = [
-        'small-size',
-        'ql-indent-1',
-        'ql-align-center',
-        'ql-direction-rtl',
-        'ql-font-roman',
-        'ql-size-small',
-      ];
-      assert.deepEqual(c.getClasses(), classes);
+    const attrs: OpAttributes = {
+      indent: 1,
+      align: AlignType.Center,
+      direction: DirectionType.Rtl,
+      font: 'roman',
+      size: 'small',
+      background: 'red',
+    };
 
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), attrs);
-      c = new RenderOp(o, options);
-      assert.deepEqual(c.getClasses(), classes.concat('ql-image'));
+    const expectedClasses = [
+      'small-size',
+      'ql-indent-1',
+      'ql-align-center',
+      'ql-direction-rtl',
+      'ql-font-roman',
+      'ql-size-small',
+    ];
 
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Video, ''), attrs);
-      c = new RenderOp(o, options);
-      assert.deepEqual(c.getClasses(), classes.concat('ql-video'));
+    it('should return an empty array when there are no classes', () => {
+      // Notice we are not passing in attrs.
+      const ro = new RenderOp(new DeltaInsertOp('hello'), options);
+      assert.deepEqual(ro.getClasses(), []);
+    });
 
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, ''), attrs);
-      c = new RenderOp(o, options);
-      assert.deepEqual(c.getClasses(), classes.concat('ql-formula'));
+    it('should return prefixed classes for an inline insert', () => {
+      const ro = new RenderOp(new DeltaInsertOp('hello', attrs), options);
+      assert.deepEqual(ro.getClasses(), expectedClasses);
+    });
 
-      o = new DeltaInsertOp('f', attrs);
-      c = new RenderOp(o, {
+    it('should return prefixed classes for an image', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Image, ''),
+        attrs,
+      );
+      const ro = new RenderOp(op, options);
+      assert.deepEqual(ro.getClasses(), expectedClasses.concat('ql-image'));
+    });
+
+    it('should return prefixed classes for a video', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Video, ''),
+        attrs,
+      );
+      const ro = new RenderOp(op, options);
+      assert.deepEqual(ro.getClasses(), expectedClasses.concat('ql-video'));
+    });
+
+    it('should return prefixed classes for a formula', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Formula, ''),
+        attrs,
+      );
+      const ro = new RenderOp(op, options);
+      assert.deepEqual(ro.getClasses(), expectedClasses.concat('ql-formula'));
+    });
+
+    it('should add a background class with the allowBackgroundClasses option', () => {
+      const op = new DeltaInsertOp('f', attrs);
+      const ro = new RenderOp(op, {
         ...options,
         allowBackgroundClasses: true,
       });
-      assert.deepEqual(c.getClasses(), classes.concat('ql-background-red'));
+      assert.deepEqual(ro.getClasses(), [
+        ...expectedClasses,
+        'ql-background-red',
+      ]);
     });
 
-    it('should return no classes if `inlineStyles` is specified', () => {
-      var attrs = {
-        indent: 1,
-        align: AlignType.Center,
-        direction: DirectionType.Rtl,
-        font: 'roman',
-        size: 'small',
-        background: 'red',
-      };
-      var o = new DeltaInsertOp('f', attrs);
-      var c = new RenderOp(o, { inlineStyles: {} });
-      assert.deepEqual(c.getClasses(), []);
+    it('should not return any classes with inlineStyles being specified', () => {
+      const op = new DeltaInsertOp('f', attrs);
+      const ro = new RenderOp(op, { inlineStyles: {} });
+      assert.deepEqual(ro.getClasses(), []);
     });
   });
 
   describe('getTag', () => {
-    it('should return the tag to render this op', () => {
-      var op = new DeltaInsertOp('hello');
-      var c = new RenderOp(op);
-      assert.deepEqual(c.getTag(), 'span');
+    it('should return the span tag for an inline insert', () => {
+      const ro = new RenderOp(new DeltaInsertOp('hello'));
+      assert.deepEqual(ro.getTag(), 'span');
+    });
 
-      var o = new DeltaInsertOp('', { code: true });
-      c = new RenderOp(o);
-      assert.deepEqual(c.getTag(), ['code']);
+    it('should return the p tag for an inline code insert', () => {
+      const ro = new RenderOp(new DeltaInsertOp('', { code: true }));
+      assert.deepEqual(ro.getTag(), 'code');
+    });
 
-      (
-        [
-          [DataType.Image, 'img'],
-          [DataType.Video, 'iframe'],
-          [DataType.Formula, 'span'],
-        ] as const
-      ).forEach((item) => {
-        o = new DeltaInsertOp(new InsertDataQuill(item[0], ''));
-        c = new RenderOp(o);
-        assert.deepEqual(c.getTag(), [item[1]]);
-      });
+    it('should return the proper tag for image', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Image, '')),
+      );
+      assert.deepEqual(ro.getTag(), 'img');
+    });
 
-      [
+    it('should return the proper tag for video', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Video, '')),
+      );
+      assert.deepEqual(ro.getTag(), 'iframe');
+    });
+
+    it('should return the proper tag for formula', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Formula, '')),
+      );
+      assert.deepEqual(ro.getTag(), 'span');
+    });
+
+    it('should return the proper tag for a block insert', () => {
+      const cases = [
         ['blockquote', 'blockquote'],
         ['code-block', 'pre'],
         ['list', 'li'],
         ['header', 'h2'],
-      ].forEach((item) => {
-        o = new DeltaInsertOp('', { [item[0]]: true, header: 2 });
-        c = new RenderOp(o);
-        assert.deepEqual(c.getTag(), [item[1]]);
+      ] as const;
+      cases.forEach(([attr, expected]) => {
+        const ro = new RenderOp(
+          new DeltaInsertOp('', { [attr]: true, header: 2 }),
+        );
+        assert.deepEqual(ro.getTag(), expected);
       });
+    });
 
-      [
+    it('should return a custom tag', () => {
+      const cases = [
         ['blockquote', 'blockquote'],
         ['code-block', 'div'],
         ['bold', 'h2'],
         ['list', 'li'],
         ['header', 'h2'],
-      ].forEach((item) => {
-        o = new DeltaInsertOp('', { [item[0]]: true, header: 2 });
-        c = new RenderOp(o, {
+      ] as const;
+      cases.forEach(([attr, expected]) => {
+        const op = new DeltaInsertOp('', { [attr]: true, header: 2 });
+        const ro = new RenderOp(op, {
           customTag: (format) => {
             if (format === 'code-block') {
               return 'div';
@@ -312,9 +367,11 @@ describe('OpToHtmlConverter', () => {
             }
           },
         });
-        assert.deepEqual(c.getTag(), [item[1]]);
+        assert.deepEqual(ro.getTag(), expected);
       });
+    });
 
+    it('should return the proper tag for a block insert with custom tags and attributes', () => {
       const cases = [
         ['blockquote', 'blockquote'],
         ['code-block', 'pre'],
@@ -336,197 +393,241 @@ describe('OpToHtmlConverter', () => {
         });
         assert.equal(ro.getTag(), expected);
       });
-
-      var attrs = {
-        link: 'http',
-        script: ScriptType.Sub,
-        bold: true,
-        italic: true,
-        strike: true,
-        underline: true,
-        attr1: true,
-      };
-      o = new DeltaInsertOp('', attrs);
-      c = new RenderOp(o, {
-        customTag: (format) => {
-          if (format === 'bold') {
-            return 'b';
-          }
-          if (format === 'attr1') {
-            return 'attr2';
-          }
-        },
-      });
-      assert.deepEqual(c.getTag(), ['a', 'sub', 'b', 'em', 's', 'u', 'attr2']);
     });
   });
 
-  describe('getTagAttributes()', function () {
-    it('should return tag attributes', () => {
-      var op = new DeltaInsertOp('hello');
-      var c = new RenderOp(op);
-      assert.deepEqual(c.getTagAttributes(), []);
+  describe('getTagAttributes', () => {
+    it('should return an empty object when there are no attributes', () => {
+      const ro = new RenderOp(new DeltaInsertOp('hello'));
+      assert.deepEqual(ro.getTagAttributes('p'), {});
+    });
 
-      var o = new DeltaInsertOp('', { code: true, color: 'red' });
-      var c = new RenderOp(o);
-      assert.deepEqual(c.getTagAttributes(), []);
+    it('should return an empty object when there are no attributes that should be element attributes', () => {
+      const op = new DeltaInsertOp('', { code: true, color: 'red' });
+      const ro = new RenderOp(op);
+      assert.deepEqual(ro.getTagAttributes('pre'), {});
+    });
 
-      var o = new DeltaInsertOp(new InsertDataQuill(DataType.Image, 'http:'), {
-        color: 'red',
-      });
-      var c = new RenderOp(o, {
+    it('should return an object with a custom data attribute', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Image, 'https://example.com/image.png'),
+        {
+          something: 'wow',
+        },
+      );
+      const ro = new RenderOp(op, {
         customAttributes: (op) => {
-          if (op.attributes.color) {
+          if (op.attributes.something) {
             return {
-              'data-color': op.attributes.color,
+              'data-something': op.attributes.something,
             };
           }
         },
       });
-      assert.deepEqual(c.getTagAttributes(), [
-        ['data-color', 'red'],
-        ['class', 'ql-image'],
-        ['src', 'http:'],
-      ]);
+      assert.deepEqual(ro.getTagAttributes('img'), {
+        className: 'ql-image',
+        src: 'https://example.com/image.png',
+        'data-something': 'wow',
+      });
+    });
 
-      var o = new DeltaInsertOp(new InsertDataQuill(DataType.Image, 'http:'), {
+    it('should return an object with the proper attributes for an image', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Image, 'https://example.com/image.png'),
+        {
+          width: '200',
+        },
+      );
+      const ro = new RenderOp(op);
+      assert.deepEqual(ro.getTagAttributes('img'), {
+        className: 'ql-image',
+        src: 'https://example.com/image.png',
         width: '200',
       });
-      var c = new RenderOp(o);
-      assert.deepEqual(c.getTagAttributes(), [
-        ['class', 'ql-image'],
-        ['width', '200'],
-        ['src', 'http:'],
-      ]);
+    });
 
-      var o = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, '-'), {
+    it('should return an object with the proper attributes for a formula', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, '-'), {
         color: 'red',
       });
-      var c = new RenderOp(o);
-      assert.deepEqual(c.getTagAttributes(), [['class', 'ql-formula']]);
-
-      var o = new DeltaInsertOp(new InsertDataQuill(DataType.Video, 'http:'), {
-        color: 'red',
+      const ro = new RenderOp(op);
+      assert.deepEqual(ro.getTagAttributes('span'), {
+        className: 'ql-formula',
       });
-      var c = new RenderOp(o);
-      assert.deepEqual(c.getTagAttributes(), [
-        ['class', 'ql-video'],
-        ['frameborder', '0'],
-        ['allowfullscreen', 'true'],
-        ['src', 'http:'],
-      ]);
+    });
 
-      var o = new DeltaInsertOp('link', { color: 'red', link: 'l' });
+    it('should return an object with the proper attributes for a video', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Video, 'https://example.com/video.mp4'),
+        {
+          color: 'red',
+        },
+      );
+      const ro = new RenderOp(op);
+      assert.deepEqual(ro.getTagAttributes('iframe'), {
+        className: 'ql-video',
+        allowFullScreen: true,
+        src: 'https://example.com/video.mp4',
+      });
+    });
 
-      var c = new RenderOp(o);
-      assert.deepEqual(c.getTagAttributes(), [
-        ['style', 'color:red'],
-        ['href', 'l'],
-      ]);
+    it('should return an object with the proper attributes for a link', () => {
+      const op = new DeltaInsertOp('link', {
+        color: 'red',
+        link: 'https://example.com/hello',
+      });
+      const ro = new RenderOp(op);
+      assert.deepEqual(ro.getTagAttributes('a'), {
+        className: 'ql-link',
+        href: 'https://example.com/hello',
+      });
+    });
 
-      var c = new RenderOp(o, { linkRel: 'nofollow' });
-      assert.deepEqual(c.getTagAttributes(), [
-        ['style', 'color:red'],
-        ['href', 'l'],
-        ['rel', 'nofollow'],
-      ]);
+    it('should return an object with the proper attributes for a link with a linkRel option', () => {
+      const op = new DeltaInsertOp('link', {
+        color: 'red',
+        link: 'https://example.com/hello',
+      });
+      const ro = new RenderOp(op, { linkRel: 'nofollow' });
+      assert.deepEqual(ro.getTagAttributes('a'), {
+        className: 'ql-link',
+        href: 'https://example.com/hello',
+        rel: 'nofollow',
+      });
+    });
 
-      var o = new DeltaInsertOp('', { 'code-block': 'javascript' });
-      var c = new RenderOp(o);
-      assert.deepEqual(c.getTagAttributes(), [['data-language', 'javascript']]);
-
-      var o = new DeltaInsertOp('', { 'code-block': true });
-      var c = new RenderOp(o);
-      assert.deepEqual(c.getTagAttributes(), []);
+    it('should return an object with the data-language attribute for a code block', () => {
+      const op = new DeltaInsertOp('', { 'code-block': 'javascript' });
+      const ro = new RenderOp(op);
+      assert.deepEqual(ro.getTagAttributes('pre'), {
+        'data-language': 'javascript',
+      });
     });
   });
 
-  describe('getContent()', function () {
-    it('should return proper content depending on type', () => {
-      var o = new DeltaInsertOp('aa', { indent: 1 });
-      var c = new RenderOp(o);
-      assert.equal(c.getContent(), '');
+  describe('renderNode', () => {
+    describe('node', () => {
+      it('should return proper HTML content for a complex op', () => {
+        const attributes: OpAttributes = {
+          link: 'https://example.com/hello',
+          bold: true,
+          italic: true,
+          underline: true,
+          strike: true,
+          script: ScriptType.Super,
+          font: 'verdana',
+          size: 'small',
+          color: 'red',
+          background: '#fff',
+        };
 
-      o = new DeltaInsertOp('sss<&>,', { bold: true });
-      c = new RenderOp(o);
-      assert.equal(c.getContent(), 'sss<&>,');
-
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, 'ff'), {
-        bold: true,
-      });
-      c = new RenderOp(o);
-      assert.equal(c.getContent(), 'ff');
-
-      o = new DeltaInsertOp(new InsertDataQuill(DataType.Video, 'ff'), {
-        bold: true,
-      });
-      c = new RenderOp(o);
-      assert.equal(c.getContent(), '');
-    });
-  });
-
-  describe('html retrieval', function () {
-    var attributes = {
-      link: 'http://',
-      bold: true,
-      italic: true,
-      underline: true,
-      strike: true,
-      script: ScriptType.Super,
-      font: 'verdana',
-      size: 'small',
-      color: 'red',
-      background: '#fff',
-    };
-    var op1 = new DeltaInsertOp('aaa', attributes);
-    var c1 = new RenderOp(op1);
-    var result = [
-      '<a class="ql-font-verdana ql-size-small"',
-      ' style="color:red;background-color:#fff" href="http://">',
-      '<sup>',
-      '<strong><em><s><u>aaa</u></s></em></strong>',
-      '</sup>',
-      '</a>',
-    ].join('');
-
-    describe('renderNode', function () {
-      it('should return inline html', () => {
-        c1 = new RenderOp(op1);
-        var act = c1.getHtml();
-        assert.equal(act, result);
-
-        var op = new DeltaInsertOp('\n', { bold: true });
-        c1 = new RenderOp(op);
-        assert.equal(c1.getHtml(), '\n');
-
-        var op = new DeltaInsertOp('\n', { color: '#fff' });
-        c1 = new RenderOp(op);
-        assert.equal(c1.getHtml(), '\n');
-
-        var op = new DeltaInsertOp('\n', { 'code-block': 'javascript' });
-        c1 = new RenderOp(op);
-        assert.equal(c1.getHtml(), '<pre data-language="javascript"></pre>');
-
-        var op = new DeltaInsertOp(
-          new InsertDataQuill(DataType.Image, 'http://'),
+        const ro = new RenderOp(new DeltaInsertOp('aaa', attributes));
+        assert.equal(
+          renderToString(ro.renderNode().node),
+          `<a class="ql-font-verdana ql-size-small" style="color:red;background-color:#fff" href="https://example.com/hello"><sup><strong><em><s><u>aaa</u></s></em></strong></sup></a>`,
         );
-        c1 = new RenderOp(op, {
-          customClasses: (_) => {
-            return 'ql-custom';
-          },
+      });
+
+      it('should return proper HTML content for a paragraph', () => {
+        const ro = new RenderOp(new DeltaInsertOp('aa', { indent: 1 }));
+        assert.equal(renderToString(ro.renderNode().node), '');
+      });
+
+      it('should return proper HTML content for a blockquote', () => {
+        const ro = new RenderOp(
+          new DeltaInsertOp('hello', { blockquote: true }),
+        );
+        assert.equal(
+          renderToString(ro.renderNode().node),
+          '<blockquote>hello</blockquote>',
+        );
+      });
+
+      it('should return proper HTML content for a formula', () => {
+        const ro = new RenderOp(
+          new DeltaInsertOp(new InsertDataQuill(DataType.Formula, 'ff'), {
+            bold: true,
+          }),
+        );
+        assert.equal(
+          renderToString(ro.renderNode().node),
+          '<span class="ql-formula">ff</span>',
+        );
+      });
+
+      it('should return proper HTML content for an image', () => {
+        const op = new DeltaInsertOp(
+          new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
+        );
+        const ro = new RenderOp(op, {
+          customClasses: () => 'my-custom-class',
+          customAttributes: () => ({
+            alt: 'Hello',
+          }),
         });
         assert.equal(
-          c1.renderNode().node,
-          '<img class="ql-custom ql-image" src="http://"/>',
+          renderToString(ro.renderNode().node),
+          '<img alt="Hello" class="my-custom-class ql-image" src="https://example.com/hello.png"/>',
         );
       });
 
-      it('should wrap contents with the render function', () => {
-        const insert = new DeltaInsertOp('hello');
+      it('should return proper HTML content for a video', () => {
+        const ro = new RenderOp(
+          new DeltaInsertOp(
+            new InsertDataQuill(DataType.Video, 'https://example.com/vid1.mp4'),
+            {
+              bold: true,
+            },
+          ),
+        );
+        assert.equal(
+          renderToString(ro.renderNode().node),
+          `<iframe class="ql-video" src="https://example.com/vid1.mp4" allowfullscreen style="border:none"></iframe>`,
+        );
+      });
+    });
+
+    describe('render', () => {
+      it('should wrap its argument in a simple case', () => {
+        const op = new DeltaInsertOp('hello');
         const ro = new RenderOp(op);
         const { render } = ro.renderNode();
         const got = render('something');
         assert.equal(got, '<p>something</p>');
+      });
+
+      it('should wrap its argument with attributes', () => {
+        const op = new DeltaInsertOp('hello', { bold: true, custom1: true });
+        const ro = new RenderOp(op, {
+          inlineStyles: {
+            custom1: () => ({
+              color: 'red',
+            }),
+          },
+          customAttributes: () => ({
+            // A boolean attribute.
+            'data-custom': undefined,
+          }),
+        });
+        const { render } = ro.renderNode();
+        assert.equal(
+          render('something'),
+          '<span class="ql-bold" style="color:red" data-custom>something</span>',
+        );
+      });
+
+      it('should wrap its argument with an image link', () => {
+        const op = new DeltaInsertOp(
+          new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
+        );
+        const ro = new RenderOp(op, {
+          customClasses: () => 'my-img',
+        });
+        const { render } = ro.renderNode();
+        assert.equal(
+          render('something'),
+          '<img class="my-img ql-image" src="https://example.com/hello.png"/>',
+        );
       });
     });
   });

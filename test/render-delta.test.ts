@@ -6,6 +6,7 @@ import { delta1 } from './data/delta1.js';
 import { DataType, ListType, ScriptType } from './../src/value-types.js';
 import { InsertDataCustom, InsertDataQuill } from '../src/InsertData.js';
 import { InlineGroup } from '../src/grouper/group-types.js';
+import { renderToString } from 'react-dom/server';
 
 const htmlEncodingMap = [
   ['&', '&amp;'],
@@ -22,25 +23,101 @@ const encodeHtml = (str: string) =>
     str,
   );
 
-describe('RenderDelta', function () {
-  describe('constructor', function () {
-    var hugeOps = [
-      { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
+describe('RenderDelta', () => {
+  describe('constructor', () => {
+    it('should set default options', () => {
+      const rd = new RenderDelta({ ops: [] });
+
+      assert.equal(rd.state.options.orderedListTag, 'ol');
+      assert.equal(rd.state.options.bulletListTag, 'ul');
+      assert.equal(rd.state.options.allowBackgroundClasses, false);
+      // The URL sanitizer should be the identity function by default.
+      assert.equal(
+        rd.state.options.urlSanitizer('http://example.com?q1=x'),
+        'http://example.com?q1=x',
+      );
+    });
+  });
+
+  describe('render', () => {
+    const ops = [
+      { insert: 'this is text' },
       { insert: '\n' },
+      { insert: 'this is code' },
+      { insert: '\n', attributes: { 'code-block': true } },
+      { insert: 'this is code TOO!' },
+      { insert: '\n', attributes: { 'code-block': true } },
     ];
 
-    it('should instantiate return proper html', function () {
+    it('should render html', function () {
+      const rd = new RenderDelta({ ops });
+
+      const html = renderToString(rd.render());
+      assert.equal(
+        html,
+        `<p>this is text</p><pre>this is code</pre><pre>this is code TOO!</pre>`,
+      );
+    });
+
+    it('should render a mention', () => {
+      let ops = [
+        {
+          insert: 'Mention1',
+          attributes: {
+            mentions: true,
+            mention: {
+              class: 'abc',
+              // slug isn't rendered by this library
+              slug: 'a',
+            },
+          },
+        },
+      ];
+      const rd = new RenderDelta({
+        ops,
+        options: {
+          mentionTag: 'span',
+        },
+      });
+      const html = rd.render();
+      assert.equal(html, '<span class="abc">Mention1</span>');
+    });
+
+    it('should render a mention with a link', () => {
+      var qdc = new RenderDelta({
+        ops: [
+          {
+            insert: 'Mention2',
+            attributes: {
+              mentions: true,
+              mention: { link: 'https://example.com/abc' },
+            },
+          },
+        ],
+      });
+      const html = renderToString(qdc.render());
+      assert.equal(
+        html,
+        '<p><a href="https://example.com/abc" target="_blank">Mention2</a></p>',
+      );
+    });
+
+    it('should return proper html', function () {
       var qdc = new RenderDelta({
         ops: delta1.ops,
         options: {
           classPrefix: 'noz',
         },
       });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(html, delta1.html);
     });
 
     it('should set default inline styles for inlineStyles: true', function () {
+      const hugeOps = [
+        { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
+        { insert: '\n' },
+      ];
       var qdc = new RenderDelta({
         ops: hugeOps,
         options: {
@@ -54,7 +131,7 @@ describe('RenderDelta', function () {
           },
         },
       });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(
         html.includes('<span style="color:red;font-size: 2.5em">huge</span>'),
         true,
@@ -63,13 +140,17 @@ describe('RenderDelta', function () {
     });
 
     it('should set default inline styles when `inlineStyles` is a truthy non-object', function () {
+      const hugeOps = [
+        { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
+        { insert: '\n' },
+      ];
       var qdc = new RenderDelta({
         ops: hugeOps,
         options: {
           inlineStyles: 1,
         },
       });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(
         html.includes('<span style="font-size: 2.5em">huge</span>'),
         true,
@@ -78,6 +159,10 @@ describe('RenderDelta', function () {
     });
 
     it('should allow setting inline styles', function () {
+      const hugeOps = [
+        { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
+        { insert: '\n' },
+      ];
       var qdc = new RenderDelta({
         ops: hugeOps,
         options: {
@@ -88,74 +173,14 @@ describe('RenderDelta', function () {
           },
         },
       });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(
         html.includes('<span style="font-size: 6em">huge</span>'),
         true,
         html,
       );
     });
-  });
 
-  describe('render', function () {
-    var ops2 = [
-      { insert: 'this is text' },
-      { insert: '\n' },
-      { insert: 'this is code' },
-      { insert: '\n', attributes: { 'code-block': true } },
-      { insert: 'this is code TOO!' },
-      { insert: '\n', attributes: { 'code-block': true } },
-    ];
-
-    it('should render html', function () {
-      var qdc = new RenderDelta({ ops: ops2 });
-
-      var html = qdc.render();
-      assert.equal(html.indexOf('<pre>this is code') > -1, true, html);
-    });
-
-    it('should render mention', function () {
-      let ops = [
-        {
-          insert: 'mention',
-          attributes: {
-            mentions: true,
-            mention: {
-              slug: 'a',
-              class: 'abc',
-              target: '_blank',
-            },
-          },
-        },
-      ];
-      var qdc = new RenderDelta({ ops });
-      var html = qdc.render();
-      assert.equal(
-        html,
-        [
-          '<p><a class="abc"',
-          ' href="http://abc.com/a" target="_blank"',
-          '>mention</a></p>',
-        ].join(''),
-      );
-
-      var qdc = new RenderDelta({
-        ops: [
-          {
-            insert: 'mention',
-            attributes: {
-              mentions: true,
-              mention: { slug: 'aa' },
-            },
-          },
-        ],
-      });
-      var html = qdc.render();
-      assert.equal(
-        html,
-        ['<p><a', ' href="about:blank">mention</a></p>'].join(''),
-      );
-    });
     it('should render links with rels', function () {
       var ops = [
         {
@@ -178,14 +203,14 @@ describe('RenderDelta', function () {
           linkRel: 'license',
         },
       });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(
         html,
         '<p><a href="#" target="_blank" rel="nofollow noopener">external link</a><a href="#" target="_blank" rel="license">internal link</a></p>',
       );
 
       qdc = new RenderDelta({ ops });
-      html = qdc.render();
+      html = renderToString(qdc.render());
       assert.equal(
         html,
         '<p><a href="#" target="_blank" rel="nofollow noopener">external link</a><a href="#" target="_blank">internal link</a></p>',
@@ -200,7 +225,7 @@ describe('RenderDelta', function () {
         },
       ];
       let qdc = new RenderDelta({ ops });
-      let html = qdc.render();
+      let html = renderToString(qdc.render());
       assert.equal(
         html,
         [
@@ -224,7 +249,7 @@ describe('RenderDelta', function () {
         { insert: '\n', attributes: { list: 'ordered' } },
       ];
       var qdc = new RenderDelta({ ops: ops4 });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
 
       assert.equal(html.indexOf('<p>mr') > -1, true);
       assert.equal(html.indexOf('</ol><ul><li>there') > -1, true);
@@ -238,7 +263,7 @@ describe('RenderDelta', function () {
           multiLineParagraph: false,
         },
       });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
 
       assert.equal(
         html,
@@ -258,7 +283,7 @@ describe('RenderDelta', function () {
         { insert: '\n', attributes: { indent: 1, list: 'unchecked' } },
       ];
       var qdc = new RenderDelta({ ops: ops4 });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(
         html,
         [
@@ -284,13 +309,13 @@ describe('RenderDelta', function () {
         ops: ops4,
         options: { paragraphTag: 'div' },
       });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(html.indexOf('<div class="ql-align') > -1, true);
       assert.equal(html.indexOf('<div class="ql-direction') > -1, true);
       assert.equal(html.indexOf('<div class="ql-indent') > -1, true);
 
       var qdc = new RenderDelta({ ops: ops4 });
-      var html = qdc.render();
+      const html = renderToString(qdc.render());
       assert.equal(html.indexOf('<p class="ql-align') > -1, true);
       assert.equal(html.indexOf('<p class="ql-direction') > -1, true);
       assert.equal(html.indexOf('<p class="ql-indent') > -1, true);
@@ -303,7 +328,7 @@ describe('RenderDelta', function () {
         { insert: '\n' },
       ];
       let qdc = new RenderDelta({ ops, options: { linkTarget: '' } });
-      let html = qdc.render();
+      let html = renderToString(qdc.render());
       assert.equal(
         html,
         [
@@ -314,7 +339,7 @@ describe('RenderDelta', function () {
       );
 
       qdc = new RenderDelta({ ops });
-      html = qdc.render();
+      html = renderToString(qdc.render());
       assert.equal(
         html,
         [
@@ -325,7 +350,7 @@ describe('RenderDelta', function () {
       );
 
       qdc = new RenderDelta({ ops, options: { linkTarget: '_top' } });
-      html = qdc.render();
+      html = renderToString(qdc.render());
       assert.equal(
         html,
         [
@@ -354,7 +379,7 @@ describe('RenderDelta', function () {
         },
       });
       assert.equal(
-        qdc.render(),
+        renderToString(qdc.render()),
         [
           `<p><a href="REDACTED" target="_blank">test</a>`,
           `<a href="http://abc&lt;" target="_blank">hi</a></p>`,
@@ -389,7 +414,7 @@ describe('RenderDelta', function () {
 
       let qdc = new RenderDelta({ ops });
       assert.equal(
-        qdc.render(),
+        renderToString(qdc.render()),
         [
           `<table><tbody>`,
           `<tr><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td></tr>`,
@@ -416,7 +441,7 @@ describe('RenderDelta', function () {
 
       let qdc = new RenderDelta({ ops });
       assert.equal(
-        qdc.render(),
+        renderToString(qdc.render()),
         [
           `<table><tbody>`,
           `<tr><td data-row="row-1">cell</td></tr>`,
@@ -515,7 +540,7 @@ describe('RenderDelta', function () {
 
       let qdc = new RenderDelta({ ops });
       assert.equal(
-        qdc.render(),
+        renderToString(qdc.render()),
         [
           `<table><tbody>`,
           `<tr><td data-row="row-1">11</td><td data-row="row-1">12</td><td data-row="row-1">13</td></tr>`,
@@ -670,7 +695,7 @@ describe('RenderDelta', function () {
           },
         ];
         var qdc = new RenderDelta({ ops });
-        let html = qdc.render();
+        let html = renderToString(qdc.render());
         assert.equal(
           html,
           [
@@ -688,7 +713,7 @@ describe('RenderDelta', function () {
             multiLineCodeBlock: false,
           },
         });
-        html = qdc.render();
+        html = renderToString(qdc.render());
         assert.equal(
           '<pre>line 1</pre><pre>line 2</pre>' +
             '<pre data-language="javascript">line 3</pre>' +
@@ -699,18 +724,17 @@ describe('RenderDelta', function () {
           html,
         );
         qdc = new RenderDelta({ ops: [ops[0], ops[1]] });
-        html = qdc.render();
+        html = renderToString(qdc.render());
         assert.equal(html, '<pre>line 1</pre>');
       });
     });
   });
 
   describe('custom types', () => {
-    it(`should return empty string if renderer not defined for
-                           custom blot`, () => {
+    it('should return an empty string if a renderer not defined for a custom blot', () => {
       let ops = [{ insert: { customstuff: 'my val' } }];
       let qdc = new RenderDelta({ ops });
-      assert.equal(qdc.render(), '<p></p>');
+      assert.equal(renderToString(qdc.render()), '<p></p>');
     });
     it('should render custom insert types with given renderer', () => {
       let ops = [
@@ -724,7 +748,7 @@ describe('RenderDelta', function () {
         }
         return 'unknown';
       });
-      let html = qdc.render();
+      let html = renderToString(qdc.render());
       assert.equal(html, '<p><b><i>my text</i></b>unknown</p>');
     });
 
@@ -744,7 +768,7 @@ describe('RenderDelta', function () {
         }
         return 'unknown';
       });
-      let html = qdc.render();
+      let html = renderToString(qdc.render());
       assert.equal(html, '<p>hello my friend!</p><div>how r u?</div>');
     });
 
@@ -765,11 +789,11 @@ describe('RenderDelta', function () {
       };
       let qdc = new RenderDelta({ ops: ops.slice(0, 2) });
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.render(), '<pre>:</pre>');
+      assert.equal(renderToString(qdc.render()), '<pre>:</pre>');
 
       qdc = new RenderDelta({ ops });
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.render(), '<pre>:\ncode1\n:</pre>');
+      assert.equal(renderToString(qdc.render()), '<pre>:\ncode1\n:</pre>');
 
       qdc = new RenderDelta({
         ops,
@@ -782,7 +806,7 @@ describe('RenderDelta', function () {
         },
       });
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.render(), '<code>:\ncode1\n:</code>');
+      assert.equal(renderToString(qdc.render()), '<code>:\ncode1\n:</code>');
     });
 
     it('should render custom insert types in headers with given renderer', () => {
@@ -802,30 +826,30 @@ describe('RenderDelta', function () {
       };
       let qdc = new RenderDelta({ ops: ops.slice(0, 2) });
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.render(), '<h1>:</h1>');
+      assert.equal(renderToString(qdc.render()), '<h1>:</h1>');
 
       qdc = new RenderDelta({ ops });
       qdc.renderCustomWith(renderer);
-      assert.equal(qdc.render(), '<h1>:<br/>hello<br/>:</h1>');
+      assert.equal(renderToString(qdc.render()), '<h1>:<br/>hello<br/>:</h1>');
     });
   });
 
   describe('getListTag', function () {
     it('should return the expected list tag', function () {
-      constop = new DeltaInsertOp('\n', { list: ListType.Ordered });
-      constqdc = new RenderDelta({ ops: delta1.ops });
+      const op = new DeltaInsertOp('\n', { list: ListType.Ordered });
+      const qdc = new RenderDelta({ ops: delta1.ops });
       assert.equal(qdc.getListTag(op), 'ol');
 
-      constop = new DeltaInsertOp('\n', { list: ListType.Bullet });
+      const op = new DeltaInsertOp('\n', { list: ListType.Bullet });
       assert.equal(qdc.getListTag(op), 'ul');
 
-      constop = new DeltaInsertOp('\n', { list: ListType.Checked });
+      const op = new DeltaInsertOp('\n', { list: ListType.Checked });
       assert.equal(qdc.getListTag(op), 'ul');
 
-      constop = new DeltaInsertOp('\n', { list: ListType.Unchecked });
+      const op = new DeltaInsertOp('\n', { list: ListType.Unchecked });
       assert.equal(qdc.getListTag(op), 'ul');
 
-      constop = new DeltaInsertOp('d');
+      const op = new DeltaInsertOp('d');
       assert.equal(qdc.getListTag(op), '');
     });
   });
@@ -844,14 +868,14 @@ describe('RenderDelta', function () {
     describe('renderInlines', function () {
       it('should render inlines', function () {
         var qdc = new RenderDelta({ ops });
-        var inlines = qdc.render();
+        var inlines = renderToString(qdc.render());
         assert.equal(
           inlines,
           ['<p>Hello', '<em> my </em><br/> name is joey</p>'].join(''),
         );
 
         qdc = new RenderDelta({ ops, options: { paragraphTag: 'div' } });
-        var inlines = qdc.render();
+        var inlines = renderToString(qdc.render());
         assert.equal(
           inlines,
           '<div>Hello<em> my </em><br/> name is joey</div>',
@@ -869,14 +893,14 @@ describe('RenderDelta', function () {
             },
           },
         });
-        var inlines = qdc.render();
+        var inlines = renderToString(qdc.render());
         assert.equal(
           inlines,
           ['<p>Hello', '<i> my </i><br/> name is joey</p>'].join(''),
         );
 
         qdc = new RenderDelta({ ops, options: { paragraphTag: 'div' } });
-        var inlines = qdc.render();
+        var inlines = renderToString(qdc.render());
         assert.equal(
           inlines,
           '<div>Hello<em> my </em><br/> name is joey</div>',
@@ -886,28 +910,28 @@ describe('RenderDelta', function () {
       it('should render plain new line string', function () {
         var ops = [new DeltaInsertOp('\n')];
         var qdc = new RenderDelta({ ops });
-        assert.equal(qdc.render(), '<p><br/></p>');
+        assert.equal(renderToString(qdc.render()), '<p><br/></p>');
       });
 
       it('should render styled new line string', function () {
         var ops = [new DeltaInsertOp('\n', { font: 'arial' })];
         var qdc = new RenderDelta({ ops });
-        assert.equal(qdc.render(), '<p><br/></p>');
+        assert.equal(renderToString(qdc.render()), '<p><br/></p>');
 
         var qdc = new RenderDelta({ ops });
-        assert.equal(qdc.render(), '<br/>');
+        assert.equal(renderToString(qdc.render()), '<br/>');
       });
 
       it('should render when first line is new line', function () {
         var ops = [new DeltaInsertOp('\n'), new DeltaInsertOp('aa')];
         var qdc = new RenderDelta({ ops });
-        assert.equal(qdc.render(), '<p><br/>aa</p>');
+        assert.equal(renderToString(qdc.render()), '<p><br/>aa</p>');
       });
 
       it('should render when last line is new line', function () {
         var ops = [new DeltaInsertOp('aa'), new DeltaInsertOp('\n')];
         var qdc = new RenderDelta({ ops });
-        assert.equal(qdc.render(), '<p>aa</p>');
+        assert.equal(renderToString(qdc.render()), '<p>aa</p>');
       });
 
       it('should render mixed lines', function () {
@@ -918,7 +942,7 @@ describe('RenderDelta', function () {
           italic: true,
         });
         var qdc = new RenderDelta({ ops });
-        assert.equal(qdc.render(), '<p>aabb</p>');
+        assert.equal(renderToString(qdc.render()), '<p>aabb</p>');
 
         var ops0 = [nlop, ops[0], nlop, ops[1]];
         var qdc2 = new RenderDelta({ ops: ops0 });
@@ -1014,7 +1038,7 @@ describe('RenderDelta', function () {
           },
         },
       });
-      let html = qdc.render();
+      let html = renderToString(qdc.render());
       assert.equal(
         html,
         [
@@ -1033,7 +1057,7 @@ describe('RenderDelta', function () {
           multiLineCustomBlock: false,
         },
       });
-      html = qdc.render();
+      html = renderToString(qdc.render());
       assert.equal(
         '<p>line 1</p><p>line 2</p>' +
           '<p>line 3</p>' +
@@ -1044,7 +1068,7 @@ describe('RenderDelta', function () {
         html,
       );
       qdc = new RenderDelta({ ops: [ops[0], ops[1]] });
-      html = qdc.render();
+      html = renderToString(qdc.render());
       assert.equal(html, '<p>line 1</p>');
     });
   });

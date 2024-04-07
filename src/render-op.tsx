@@ -1,7 +1,7 @@
 import {
   AnchorHTMLAttributes,
   CSSProperties,
-  HTMLAttributes,
+  HTMLAttributes as ReactHTMLAttributes,
   IframeHTMLAttributes,
   ImgHTMLAttributes,
   JSX,
@@ -13,9 +13,9 @@ import { OpAttributes, OpAttributeSanitizer } from './OpAttributeSanitizer.js';
 import { Property } from 'csstype';
 
 export type InlineStyleFn = (
-  value: string | number,
+  value: string | number | boolean,
   op: DeltaInsertOp,
-) => Partial<CSSProperties> | undefined;
+) => CSSProperties | undefined;
 
 export type InlineStyles = {
   indent: InlineStyleFn;
@@ -31,7 +31,7 @@ const DEFAULT_INLINE_STYLES: Pick<
   InlineStyles,
   'direction' | 'font' | 'indent' | 'size' | 'video'
 > = {
-  direction: (value, op): Partial<CSSProperties> | undefined => {
+  direction: (value, op): CSSProperties | undefined => {
     if (value === 'rtl') {
       return {
         direction: 'rtl',
@@ -64,14 +64,14 @@ const DEFAULT_INLINE_STYLES: Pick<
         return undefined;
     }
   },
-  indent: (value, op): Partial<CSSProperties> => {
+  indent: (value, op): CSSProperties => {
     const indentSize = Number(value) * 3;
     return {
       [op.attributes['direction'] === 'rtl' ? 'paddingRight' : 'paddingLeft']:
         `${indentSize}em`,
     };
   },
-  video: (): Partial<CSSProperties> => {
+  video: (): CSSProperties => {
     return {
       border: 'none',
     };
@@ -99,10 +99,17 @@ const inlineTags = [
   'code',
 ] as const;
 
+export type DataAttributes = {
+  [key: `data-${string}`]: unknown;
+};
+
+export type HTMLAttributes = ReactHTMLAttributes<{}> & DataAttributes;
+
 export type OpToNodeConverterOptions = {
   classPrefix?: string;
   inlineStyles?: boolean | Partial<InlineStyles>;
   listItemTag?: keyof JSX.IntrinsicElements;
+  mentionTag?: keyof JSX.IntrinsicElements;
   paragraphTag?: keyof JSX.IntrinsicElements;
   linkRel?: string;
   linkTarget?: string;
@@ -111,12 +118,12 @@ export type OpToNodeConverterOptions = {
     format: string,
     op: DeltaInsertOp,
   ) => keyof JSX.IntrinsicElements | undefined;
-  customAttributes?: <Tag extends keyof JSX.IntrinsicElements>(
+  customAttributes?: (
     op: DeltaInsertOp,
-    tag: Tag,
-  ) => HTMLAttributes<{}> | undefined;
+    tag: keyof JSX.IntrinsicElements,
+  ) => HTMLAttributes | undefined;
   customClasses?: (op: DeltaInsertOp) => string | string[] | undefined;
-  customCssStyles?: (op: DeltaInsertOp) => Partial<CSSProperties> | undefined;
+  customCssStyles?: (op: DeltaInsertOp) => CSSProperties | undefined;
 };
 
 export type RenderNode = {
@@ -134,6 +141,7 @@ export class RenderOp {
       classPrefix: 'ql',
       inlineStyles: undefined,
       listItemTag: 'li',
+      mentionTag: 'a',
       paragraphTag: 'p',
       ...options,
     };
@@ -207,7 +215,7 @@ export class RenderOp {
     );
   }
 
-  getCssStyles(): Partial<CSSProperties> {
+  getCssStyles(): CSSProperties {
     const { inlineStyles } = this.options;
 
     const propsArr: Array<keyof OpAttributes> = ['color'];
@@ -218,13 +226,17 @@ export class RenderOp {
       propsArr.push('indent', 'align', 'direction', 'font', 'size');
     }
 
-    const styles: Partial<CSSProperties> = {
+    const styles: CSSProperties = {
       ...this.getCustomCssStyles(),
     };
 
     for (const attribute of propsArr) {
       const value: unknown = this.op.attributes[attribute];
-      if (typeof value === 'string' || typeof value === 'number') {
+      if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      ) {
         const attributeStyles =
           inlineStyles &&
           typeof inlineStyles === 'object' &&
@@ -275,14 +287,12 @@ export class RenderOp {
     return styles;
   }
 
-  getTagAttributes<Tag extends keyof JSX.IntrinsicElements>(
-    tag: Tag,
-  ): HTMLAttributes<{}> {
+  getTagAttributes(tag: keyof JSX.IntrinsicElements): HTMLAttributes {
     if (this.op.attributes.code && !this.op.isLink()) {
       return {};
     }
 
-    const tagAttrs: HTMLAttributes<{}> = {
+    const tagAttrs: HTMLAttributes = {
       ...this.options.customAttributes?.(this.op, tag),
       style: this.getCssStyles(),
     };
@@ -306,7 +316,6 @@ export class RenderOp {
     }
 
     if (this.op.isACheckList()) {
-      // @ts-ignore
       tagAttrs['data-checked'] = this.op.isCheckedList();
       return tagAttrs;
     }
@@ -478,7 +487,7 @@ export class RenderOp {
         switch (item) {
           case 'link':
           case 'mentions':
-            return 'a';
+            return this.options.mentionTag || 'a';
           case 'script':
             return attributes[item] === ScriptType.Sub ? 'sub' : 'sup';
           case 'bold':

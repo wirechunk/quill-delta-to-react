@@ -10,15 +10,15 @@
   },
   "devDependencies": {
     "@types/lodash.isequal": "^4.5.8",
-    "@types/node": "^20.11.30",
+    "@types/node": "^20.12.5",
     "@types/quill": "^2.0.14",
-    "@types/react": "^18.2.73",
-    "browserify": "^16.2",
+    "@types/react": "^18.2.74",
+    "@types/react-dom": "^18.2.24",
     "husky": "^9.0.11",
     "prettier": "^3.2.5",
     "pretty-quick": "^4.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.4"
   },
   "peerDependencies": {
     "react": "^18.2.0",

@@ -2,10 +2,10 @@ import type { OpAttributeSanitizerOptions } from './OpAttributeSanitizer.js';
 
 // See https://github.com/quill-mention/quill-mention
 export type Mention = {
+  class?: string;
   name?: string;
   target?: string;
   slug?: string;
-  class?: string;
   link?: string;
   [index: string]: unknown;
 };
