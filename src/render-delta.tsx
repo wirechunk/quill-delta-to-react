@@ -92,6 +92,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       classPrefix: options.classPrefix,
       inlineStyles,
       listItemTag: options.listItemTag,
+      mentionTag: options.mentionTag,
       paragraphTag: options.paragraphTag,
       linkRel: options.linkRel,
       linkTarget: options.linkTarget,

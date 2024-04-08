@@ -151,8 +151,6 @@ export class RenderOp {
   }
 
   renderNode(): RenderNode {
-    const tags = this.getTags();
-
     let children: ReactNode = null;
     if (
       !this.op.isContainerBlock() &&
@@ -161,7 +159,16 @@ export class RenderOp {
       children = this.op.insert.value;
     }
 
+    const tags = this.getTags();
     const attributes = this.getTagAttributes();
+
+    if (
+      Array.isArray(tags) &&
+      tags.length === 0 &&
+      Object.keys(attributes).length
+    ) {
+      tags.push('span');
+    }
 
     const renderFns: Array<RenderNode['render']> = [];
 
@@ -303,10 +310,6 @@ export class RenderOp {
   }
 
   getTagAttributes(): HTMLAttributes {
-    if (this.op.attributes.code) {
-      return {};
-    }
-
     const tagAttrs: HTMLAttributes = {
       ...this.options.customAttributes?.(this.op),
     };
@@ -529,6 +532,8 @@ export class RenderOp {
       }
     }
 
-    return tags.length ? tags : 'span';
+    // Note that this array may be empty, which is the case when there's no formatting or attributes needed for inline text.
+    // The caller of this function may still render a wrapper tag if there are attributes.
+    return tags;
   }
 }

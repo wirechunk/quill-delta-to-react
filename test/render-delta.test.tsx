@@ -2,7 +2,6 @@ import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 import { DeltaInsertOp, DeltaInsertOpType } from './../src/DeltaInsertOp.js';
 import { CustomRenderer, RenderDelta } from './../src/render-delta.js';
-import { delta1 } from './data/delta1.js';
 import { DataType, ListType, ScriptType } from './../src/value-types.js';
 import { InsertDataCustom, InsertDataQuill } from '../src/InsertData.js';
 import { InlineGroup } from '../src/grouper/group-types.js';
@@ -57,11 +56,11 @@ describe('RenderDelta', () => {
 
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        `<p><span>this is text</span></p><pre data-language="plain">this is code\nthis is code too!</pre>`,
+        `<p>this is text</p><pre data-language="plain">this is code\nthis is code too!</pre>`,
       );
     });
 
-    it('should render a mention', () => {
+    it('should render a mention with a custom tag', () => {
       const ops = [
         {
           insert: 'Mention1',
@@ -83,7 +82,7 @@ describe('RenderDelta', () => {
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<span class="abc">Mention1</span>',
+        '<p><span class="abc">Mention1</span></p>',
       );
     });
 
@@ -106,15 +105,51 @@ describe('RenderDelta', () => {
       );
     });
 
-    it('should return proper HTML', function () {
+    it('should return proper HTML for complex ops', function () {
+      const ops = [
+        { insert: 'link', attributes: { link: 'http://a.com/?x=a&b=()' } },
+        { insert: 'This ' },
+        { attributes: { font: 'monospace' }, insert: 'is' },
+        { insert: ' a ' },
+        { attributes: { size: 'large' }, insert: 'test' },
+        { insert: ' ' },
+        { attributes: { italic: true, bold: true }, insert: 'data' },
+        { insert: ' ' },
+        { attributes: { underline: true, strike: true }, insert: 'that' },
+        { insert: ' is ' },
+        { attributes: { color: '#e60000' }, insert: 'will' },
+        { insert: ' ' },
+        { attributes: { background: '#ffebcc' }, insert: 'test' },
+        { insert: ' ' },
+        { attributes: { script: 'sub' }, insert: 'the' },
+        { insert: ' ' },
+        { attributes: { script: 'super' }, insert: 'rendering' },
+        { insert: ' of ' },
+        { attributes: { link: 'http://yahoo' }, insert: 'inline' },
+        { insert: ' ' },
+        { insert: { formula: 'x=data' } },
+        { insert: ' formats.\n' },
+        { insert: 'list' },
+        { insert: '\n', attributes: { list: 'bullet' } },
+        { insert: 'list' },
+        { insert: '\n', attributes: { list: 'checked' } },
+        { insert: 'some code', attributes: { code: true, bold: true } },
+        {
+          attributes: { italic: true, link: '#top', code: true },
+          insert: 'Top',
+        },
+        { insert: '\n' },
+      ];
       const rd = new RenderDelta({
-        ops: delta1.ops,
+        ops,
         options: {
           classPrefix: 'noz',
         },
       });
-      const html = renderToStaticMarkup(rd.render());
-      assert.equal(html, delta1.html);
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p><a href="http://a.com/?x=a&amp;b=()" target="_blank">link</a>This <span class="noz-font-monospace">is</span> a <span class="noz-size-large">test</span> <strong><em>data</em></strong> <s><u>that</u></s> is <span style="color:#e60000">will</span> <span style="background-color:#ffebcc">test</span> <sub>the</sub> <sup>rendering</sup> of <a href="http://yahoo" target="_blank">inline</a> <span class="noz-formula">x=data</span> formats.</p><ul><li>list</li></ul><ul><li data-checked="true">list</li></ul><p><strong><code>some code</code></strong><a href="#top" target="_blank"><em><code>Top</code></em></a></p>',
+      );
     });
 
     it('should set default inline styles for inlineStyles: true', function () {

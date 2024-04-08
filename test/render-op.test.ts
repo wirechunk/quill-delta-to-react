@@ -333,6 +333,16 @@ describe('OpToHtmlConverter', () => {
       });
     });
 
+    it('should return an object with the proper attributes for an inline code element', () => {
+      const op = new DeltaInsertOp('', { code: true, color: 'red' });
+      const ro = new RenderOp(op, { inlineStyles: true });
+      assert.deepEqual(ro.getTagAttributes(), {
+        style: {
+          color: 'red',
+        },
+      });
+    });
+
     it('should return an object with the proper attributes for an image', () => {
       const op = new DeltaInsertOp(
         new InsertDataQuill(DataType.Image, 'https://example.com/image.png'),
@@ -349,7 +359,7 @@ describe('OpToHtmlConverter', () => {
     });
 
     it('should return an object with the proper attributes for a formula', () => {
-      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, '-'), {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Formula, ''), {
         color: 'red',
       });
       const ro = new RenderOp(op);
