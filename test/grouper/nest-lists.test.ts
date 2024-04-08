@@ -1,7 +1,5 @@
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-
-import { Grouper } from './../../src/grouper/Grouper.js';
 import { nestLists } from '../../src/grouper/nest-lists.js';
 import { DeltaInsertOp } from './../../src/DeltaInsertOp.js';
 import {
@@ -11,6 +9,7 @@ import {
   BlockGroup,
 } from './../../src/grouper/group-types.js';
 import { ListType } from './../../src/value-types.js';
+import { pairOpsWithTheirBlock } from '../../src/grouper/grouping.js';
 
 describe('nestLists', function () {
   it('should not nest different types of lists', function () {
@@ -28,7 +27,7 @@ describe('nestLists', function () {
       new DeltaInsertOp('\n', { list: ListType.Unchecked }),
     ];
 
-    var groups = Grouper.pairOpsWithTheirBlock(ops);
+    const groups = pairOpsWithTheirBlock(ops);
     var act = nestLists(groups);
 
     assert.deepEqual(act, [
@@ -62,7 +61,7 @@ describe('nestLists', function () {
       new DeltaInsertOp('\n', { list: ListType.Bullet, indent: 1 }),
     ];
 
-    const groups = Grouper.pairOpsWithTheirBlock(ops);
+    const groups = pairOpsWithTheirBlock(ops);
 
     const got = nestLists(groups);
     const expected = [
@@ -102,7 +101,7 @@ describe('nestLists', function () {
       new DeltaInsertOp('\n', { list: ListType.Ordered, indent: 5 }),
       new DeltaInsertOp('\n', { list: ListType.Bullet, indent: 4 }),
     ];
-    const pairs = Grouper.pairOpsWithTheirBlock(ops);
+    const pairs = pairOpsWithTheirBlock(ops);
 
     const act = nestLists(pairs);
 

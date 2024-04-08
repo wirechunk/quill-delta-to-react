@@ -36,7 +36,7 @@ describe('DeltaInsertOp', function () {
     });
   });
 
-  describe('hasSameAdiAs()', function () {
+  describe('hasSameAdiAs', function () {
     it('should successfully if two ops have same align indent and direction', function () {
       var op1 = new DeltaInsertOp('\n', { align: AlignType.Right, indent: 2 });
       var op2 = new DeltaInsertOp('\n', { align: AlignType.Right, indent: 2 });

@@ -4,7 +4,10 @@ import {
   RenderOp,
 } from './render-op.js';
 import { DeltaInsertOp, isDeltaInsertOp } from './DeltaInsertOp.js';
-import { Grouper } from './grouper/Grouper.js';
+import {
+  groupConsecutiveSameStyleBlocks,
+  pairOpsWithTheirBlock,
+} from './grouper/grouping.js';
 import {
   BlockGroup,
   BlotBlock,
@@ -21,7 +24,7 @@ import {
   OpAttributeSanitizerOptions,
   OpAttributeSanitizer,
 } from './OpAttributeSanitizer.js';
-import { groupTables } from './grouper/TableGrouper.js';
+import { groupTables } from './grouper/group-tables.js';
 import { denormalizeInsertOp } from './denormalizeInsertOp.js';
 import { convertInsertValue } from './convert-insert-value.js';
 import { Component, Fragment, JSX, ReactNode } from 'react';
@@ -108,22 +111,19 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
   render(): ReactNode {
     return this.getGroupedOps().map((group) => {
       if (group instanceof ListGroup) {
-        return this.renderList(group as ListGroup);
+        return this.renderList(group);
       }
       if (group instanceof TableGroup) {
-        return this.renderTable(group as TableGroup);
+        return this.renderTable(group);
       }
       if (group instanceof BlockGroup) {
-        const g = group as BlockGroup;
-
-        return this.renderBlock(g.op, g.ops);
+        return this.renderBlock(group.op, group.ops);
       }
       if (group instanceof BlotBlock) {
         return this.renderCustom(group.op, null);
       }
       if (group instanceof VideoItem) {
-        const g = group as VideoItem;
-        const converter = new RenderOp(g.op, this.state.converterOptions);
+        const converter = new RenderOp(group.op, this.state.converterOptions);
         return converter.renderNode().node;
       }
       // InlineGroup
@@ -165,8 +165,8 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       }
     }
 
-    const groupedSameStyleBlocks = Grouper.groupConsecutiveSameStyleBlocks(
-      Grouper.pairOpsWithTheirBlock(deltaOps),
+    const groupedSameStyleBlocks = groupConsecutiveSameStyleBlocks(
+      pairOpsWithTheirBlock(deltaOps),
       {
         blockquotes: this.state.options.multiLineBlockquote,
         header: this.state.options.multiLineHeader,

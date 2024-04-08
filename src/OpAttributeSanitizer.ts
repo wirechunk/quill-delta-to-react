@@ -8,7 +8,7 @@ import { MentionSanitizer } from './MentionSanitizer.js';
 import type { Mention } from './MentionSanitizer.js';
 import type { OptionalAttributes } from 'quill';
 
-interface OpAttributes {
+export type OpAttributes = {
   background?: string | undefined;
   color?: string | undefined;
   font?: string | undefined;
@@ -27,7 +27,7 @@ interface OpAttributes {
   list?: ListType;
   blockquote?: boolean | undefined;
   'code-block'?: string | boolean | undefined;
-  header?: number | undefined;
+  header?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
   align?: AlignType;
   direction?: DirectionType;
   indent?: number | undefined;
@@ -38,16 +38,16 @@ interface OpAttributes {
   target?: string | undefined;
   rel?: string | undefined;
 
-  // should this custom blot be rendered as block?
+  // Set renderAsBlock to true on a custom blot to render it as block.
   renderAsBlock?: boolean | undefined;
   [key: string]: unknown;
-}
+};
 
-interface OpAttributeSanitizerOptions {
+export type OpAttributeSanitizerOptions = {
   urlSanitizer: (url: string) => string;
-}
+};
 
-class OpAttributeSanitizer {
+export class OpAttributeSanitizer {
   static sanitize(
     dirtyAttrs: OptionalAttributes['attributes'],
     sanitizeOptions: OpAttributeSanitizerOptions,
@@ -177,8 +177,11 @@ class OpAttributeSanitizer {
       cleanAttrs.list = list;
     }
 
-    if (Number(header)) {
-      cleanAttrs.header = Math.min(Number(header), 6);
+    if (header && !isNaN(Number(header))) {
+      cleanAttrs.header = Math.max(
+        Math.min(Math.round(Number(header)), 6),
+        1,
+      ) as 1 | 2 | 3 | 4 | 5 | 6;
     }
 
     if (
@@ -260,5 +263,3 @@ class OpAttributeSanitizer {
     return !!lang.match(/^[a-zA-Z\s\-\\\/\+]{1,50}$/i);
   }
 }
-
-export { OpAttributeSanitizer, OpAttributes, OpAttributeSanitizerOptions };

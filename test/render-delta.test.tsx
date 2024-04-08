@@ -6,7 +6,7 @@ import { delta1 } from './data/delta1.js';
 import { DataType, ListType, ScriptType } from './../src/value-types.js';
 import { InsertDataCustom, InsertDataQuill } from '../src/InsertData.js';
 import { InlineGroup } from '../src/grouper/group-types.js';
-import { renderToString } from 'react-dom/server';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 const htmlEncodingMap = [
   ['&', '&amp;'],
@@ -40,27 +40,29 @@ describe('RenderDelta', () => {
   });
 
   describe('render', () => {
-    const ops = [
-      { insert: 'this is text' },
-      { insert: '\n' },
-      { insert: 'this is code' },
-      { insert: '\n', attributes: { 'code-block': true } },
-      { insert: 'this is code TOO!' },
-      { insert: '\n', attributes: { 'code-block': true } },
-    ];
-
-    it('should render html', function () {
+    it('should render HTML', function () {
+      const ops = [
+        { insert: 'this is text\nthis is code' },
+        {
+          attributes: { 'code-block': 'plain' },
+          insert: '\n',
+        },
+        { insert: 'this is code too!' },
+        {
+          attributes: { 'code-block': 'plain' },
+          insert: '\n',
+        },
+      ];
       const rd = new RenderDelta({ ops });
 
-      const html = renderToString(rd.render());
       assert.equal(
-        html,
-        `<p>this is text</p><pre>this is code</pre><pre>this is code TOO!</pre>`,
+        renderToStaticMarkup(rd.render()),
+        `<p><span>this is text</span></p><pre data-language="plain">this is code\nthis is code too!</pre>`,
       );
     });
 
     it('should render a mention', () => {
-      let ops = [
+      const ops = [
         {
           insert: 'Mention1',
           attributes: {
@@ -79,8 +81,10 @@ describe('RenderDelta', () => {
           mentionTag: 'span',
         },
       });
-      const html = rd.render();
-      assert.equal(html, '<span class="abc">Mention1</span>');
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<span class="abc">Mention1</span>',
+      );
     });
 
     it('should render a mention with a link', () => {
@@ -95,10 +99,10 @@ describe('RenderDelta', () => {
           },
         ],
       });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
       assert.equal(
         html,
-        '<p><a href="https://example.com/abc" target="_blank">Mention2</a></p>',
+        '<p><a href="https://example.com/abc">Mention2</a></p>',
       );
     });
 
@@ -109,7 +113,7 @@ describe('RenderDelta', () => {
           classPrefix: 'noz',
         },
       });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
       assert.equal(html, delta1.html);
     });
 
@@ -131,7 +135,7 @@ describe('RenderDelta', () => {
           },
         },
       });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
       assert.equal(
         html.includes('<span style="color:red;font-size: 2.5em">huge</span>'),
         true,
@@ -150,7 +154,7 @@ describe('RenderDelta', () => {
           inlineStyles: true,
         },
       });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
       assert.equal(
         html.includes('<span style="font-size: 2.5em">huge</span>'),
         true,
@@ -171,7 +175,7 @@ describe('RenderDelta', () => {
           },
         },
       });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
       assert.equal(
         html.includes('<span style="font-size: 6em">huge</span>'),
         true,
@@ -179,20 +183,13 @@ describe('RenderDelta', () => {
       );
     });
 
-    it('should render links with rels', function () {
-      var ops = [
-        {
-          attributes: {
-            link: '#',
-            rel: 'nofollow noopener',
-          },
-          insert: 'external link',
-        },
+    it('should render links with a rel', function () {
+      const ops = [
         {
           attributes: {
             link: '#',
           },
-          insert: 'internal link',
+          insert: 'hello',
         },
       ];
       const rd = new RenderDelta({
@@ -202,16 +199,25 @@ describe('RenderDelta', () => {
         },
       });
       assert.equal(
-        renderToString(rd.render()),
-        '<p><a href="#" target="_blank" rel="nofollow noopener">external link</a><a href="#" target="_blank" rel="license">internal link</a></p>',
+        renderToStaticMarkup(rd.render()),
+        '<p><a href="#" target="_blank" rel="license">hello</a></p>',
       );
     });
 
-    it('should render links with target', function () {
+    it('should render links with a target', function () {
+      const ops = [
+        {
+          attributes: {
+            link: '#',
+            rel: 'nofollow noopener',
+          },
+          insert: 'hello',
+        },
+      ];
       const rd = new RenderDelta({ ops });
       assert.equal(
-        renderToString(rd.render()),
-        '<p><a href="#" target="_blank" rel="nofollow noopener">external link</a><a href="#" target="_blank">internal link</a></p>',
+        renderToStaticMarkup(rd.render()),
+        '<p><a href="#" target="_blank" rel="nofollow noopener">hello</a></p>',
       );
     });
 
@@ -225,7 +231,7 @@ describe('RenderDelta', () => {
       ];
       const rd = new RenderDelta({ ops });
       assert.equal(
-        renderToString(rd.render()),
+        renderToStaticMarkup(rd.render()),
         '<p><img class="ql-image" src="http://yahoo.com/abc.jpg"/><a href="http://aha" target="_blank"><img class="ql-image" src="http://yahoo.com/def.jpg"/></a></p>',
       );
     });
@@ -240,7 +246,7 @@ describe('RenderDelta', () => {
         { insert: '\n', attributes: { list: 'ordered' } },
       ];
       const rd = new RenderDelta({ ops });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
       assert.equal(html.includes('<p>mr'), true);
       assert.equal(html.includes('</ol><ul><li>there'), true);
     });
@@ -252,7 +258,7 @@ describe('RenderDelta', () => {
           multiLineParagraph: false,
         },
       });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
 
       assert.equal(
         html,
@@ -272,7 +278,7 @@ describe('RenderDelta', () => {
         { insert: '\n', attributes: { indent: 1, list: 'unchecked' } },
       ];
       const rd = new RenderDelta({ ops: ops4 });
-      const html = renderToString(rd.render());
+      const html = renderToStaticMarkup(rd.render());
       assert.equal(
         html,
         [
@@ -374,7 +380,7 @@ describe('RenderDelta', () => {
         });
 
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           `<p>line 1</p><br/>line 2</p><p>line 3</p><p>${encodeHtml(
             '<p>line 4</p>',
           )}</p><section attr1="test" class="ql-test" style="color:red">line 5</section>`,
@@ -389,7 +395,7 @@ describe('RenderDelta', () => {
           },
         });
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           `<p>line 1</p><p>line 2</p><p>line 3</p><p>${encodeHtml(
             '<p>line 4</p>',
           )}</p><p>line 5</p>`,
@@ -409,7 +415,7 @@ describe('RenderDelta', () => {
             ops,
             options: { paragraphTag: 'div' },
           });
-          const html = renderToString(rd.render());
+          const html = renderToStaticMarkup(rd.render());
           assert.equal(html.includes('hey'), true);
           assert.equal(html.includes('<div class="ql-align'), true);
           assert.equal(html.includes('<div class="ql-direction'), true);
@@ -418,7 +424,7 @@ describe('RenderDelta', () => {
 
         it('should render with the default p tag', () => {
           const rd = new RenderDelta({ ops });
-          const html = renderToString(rd.render());
+          const html = renderToStaticMarkup(rd.render());
           assert.equal(html.includes('hey'), true);
           assert.equal(html.includes('<p class="ql-align'), true);
           assert.equal(html.includes('<p class="ql-direction'), true);
@@ -437,14 +443,14 @@ describe('RenderDelta', () => {
         it('should render the target attribute when linkTarget is unspecified', () => {
           const rd = new RenderDelta({ ops });
           assert.equal(
-            renderToString(rd.render()),
+            renderToStaticMarkup(rd.render()),
             '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#" target="_blank">C</a></p>',
           );
         });
 
         it('should render the target attribute when linkTarget is an empty string', () => {
           const rd = new RenderDelta({ ops, options: { linkTarget: '' } });
-          let html = renderToString(rd.render());
+          let html = renderToStaticMarkup(rd.render());
           assert.equal(
             html,
             '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#">C</a></p>',
@@ -454,7 +460,7 @@ describe('RenderDelta', () => {
         it('should render the target attribute when linkTarget is _top', () => {
           const rd = new RenderDelta({ ops, options: { linkTarget: '_top' } });
           assert.equal(
-            renderToString(rd.render()),
+            renderToStaticMarkup(rd.render()),
             [
               `<p><a href="http://#" target="_self">A</a>`,
               `<a href="http://#" target="_blank">B</a>`,
@@ -482,7 +488,7 @@ describe('RenderDelta', () => {
           },
         });
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           '<p><a href="REDACTED" target="_blank">test</a><a href="http://abc&lt;" target="_blank">hi</a></p>',
         );
       });
@@ -514,7 +520,7 @@ describe('RenderDelta', () => {
 
         const rd = new RenderDelta({ ops });
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           [
             `<table><tbody>`,
             `<tr><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td></tr>`,
@@ -541,7 +547,7 @@ describe('RenderDelta', () => {
 
         const rd = new RenderDelta({ ops });
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           [
             `<table><tbody>`,
             `<tr><td data-row="row-1">cell</td></tr>`,
@@ -640,7 +646,7 @@ describe('RenderDelta', () => {
 
         const rd = new RenderDelta({ ops });
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           [
             `<table><tbody>`,
             `<tr><td data-row="row-1">11</td><td data-row="row-1">12</td><td data-row="row-1">13</td></tr>`,
@@ -781,7 +787,7 @@ describe('RenderDelta', () => {
 
         it('should correctly render code block', () => {
           const rd = new RenderDelta({ ops });
-          let html = renderToString(rd.render());
+          let html = renderToStaticMarkup(rd.render());
           assert.equal(
             html,
             `<pre>line 1\nline 2</pre><pre data-language="javascript">line 3</pre><pre>${encodeHtml(
@@ -797,7 +803,7 @@ describe('RenderDelta', () => {
               multiLineCodeBlock: false,
             },
           });
-          const html = renderToString(rd.render());
+          const html = renderToStaticMarkup(rd.render());
           assert.equal(
             html,
             `<pre>line 1</pre><pre>line 2</pre><pre data-language="javascript">line 3</pre><pre>${encodeHtml(
@@ -824,7 +830,7 @@ describe('RenderDelta', () => {
             return 'unknown';
           },
         });
-        assert.equal(renderToString(rd.render()), '<p></p>');
+        assert.equal(renderToStaticMarkup(rd.render()), '<p></p>');
       });
 
       it('should render custom insert types with the given renderer', () => {
@@ -846,7 +852,7 @@ describe('RenderDelta', () => {
           },
         });
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           '<p><b><i>my text</i></b>unknown</p>',
         );
       });
@@ -875,7 +881,7 @@ describe('RenderDelta', () => {
           },
         });
         assert.equal(
-          renderToString(rd.render()),
+          renderToStaticMarkup(rd.render()),
           '<p>hello my friend!</p><div>how r u?</div>',
         );
       });
@@ -899,12 +905,15 @@ describe('RenderDelta', () => {
 
         it('should render a simple custom insert type', () => {
           const rd = new RenderDelta({ ops: ops.slice(0, 2), customRenderer });
-          assert.equal(renderToString(rd.render()), '<pre>:</pre>');
+          assert.equal(renderToStaticMarkup(rd.render()), '<pre>:</pre>');
         });
 
         it('should render a custom insert type among other inserts', () => {
           const rd = new RenderDelta({ ops, customRenderer });
-          assert.equal(renderToString(rd.render()), '<pre>:\ncode1\n:</pre>');
+          assert.equal(
+            renderToStaticMarkup(rd.render()),
+            '<pre>:\ncode1\n:</pre>',
+          );
         });
 
         it('should render custom insert types with a custom tag', () => {
@@ -919,7 +928,10 @@ describe('RenderDelta', () => {
             },
             customRenderer,
           });
-          assert.equal(renderToString(rd.render()), '<code>:\ncode1\n:</code>');
+          assert.equal(
+            renderToStaticMarkup(rd.render()),
+            '<code>:\ncode1\n:</code>',
+          );
         });
       });
 
@@ -942,13 +954,13 @@ describe('RenderDelta', () => {
 
         it('should render a simple custom insert type', () => {
           const rd = new RenderDelta({ ops: ops.slice(0, 2), customRenderer });
-          assert.equal(renderToString(rd.render()), '<h1>:</h1>');
+          assert.equal(renderToStaticMarkup(rd.render()), '<h1>:</h1>');
         });
 
         it('should render a custom insert type among other inserts', () => {
           const rd = new RenderDelta({ ops, customRenderer });
           assert.equal(
-            renderToString(rd.render()),
+            renderToStaticMarkup(rd.render()),
             '<h1>:<br/>hello<br/>:</h1>',
           );
         });
@@ -1001,7 +1013,7 @@ describe('RenderDelta', () => {
         },
       });
       assert.equal(
-        renderToString(rd.render()),
+        renderToStaticMarkup(rd.render()),
         '<p>Hello<i> my </i><br/> name is joey</p>',
       );
     });
@@ -1009,27 +1021,27 @@ describe('RenderDelta', () => {
     it('should render plain new line string', function () {
       var ops = [new DeltaInsertOp('\n')];
       const rd = new RenderDelta({ ops });
-      assert.equal(renderToString(rd.render()), '<p><br/></p>');
+      assert.equal(renderToStaticMarkup(rd.render()), '<p><br/></p>');
     });
 
     it('should render when first line is new line', function () {
       var ops = [new DeltaInsertOp('\n'), new DeltaInsertOp('aa')];
       const rd = new RenderDelta({ ops });
-      assert.equal(renderToString(rd.render()), '<p><br/>aa</p>');
+      assert.equal(renderToStaticMarkup(rd.render()), '<p><br/>aa</p>');
     });
 
     it('should render when last line is new line', function () {
       const rd = new RenderDelta({
         ops: [new DeltaInsertOp('aa'), new DeltaInsertOp('\n')],
       });
-      assert.equal(renderToString(rd.render()), '<p>aa</p>');
+      assert.equal(renderToStaticMarkup(rd.render()), '<p>aa</p>');
     });
 
     it('should render mixed lines (1)', function () {
       const rd = new RenderDelta({
         ops: [new DeltaInsertOp('aa'), new DeltaInsertOp('bb')],
       });
-      assert.equal(renderToString(rd.render()), '<p>aabb</p>');
+      assert.equal(renderToStaticMarkup(rd.render()), '<p>aabb</p>');
     });
 
     it('should render mixed lines', () => {
@@ -1057,7 +1069,10 @@ describe('RenderDelta', () => {
         new DeltaInsertOp('\n'),
       ];
       const rd = new RenderDelta({ ops: ops4 });
-      assert.equal(rd.render(), ['<p>aa<br/><br/><br/>bb</p>'].join(''));
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p>aa<br/><br/><br/>bb</p>',
+      );
     });
   });
 });

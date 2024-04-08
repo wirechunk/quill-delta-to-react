@@ -118,10 +118,7 @@ export type OpToNodeConverterOptions = {
     format: string,
     op: DeltaInsertOp,
   ) => keyof JSX.IntrinsicElements | undefined;
-  customAttributes?: (
-    op: DeltaInsertOp,
-    tag: keyof JSX.IntrinsicElements,
-  ) => HTMLAttributes | undefined;
+  customAttributes?: (op: DeltaInsertOp) => HTMLAttributes | undefined;
   customClasses?: (op: DeltaInsertOp) => string | string[] | undefined;
   customCssStyles?: (op: DeltaInsertOp) => CSSProperties | undefined;
 };
@@ -139,7 +136,6 @@ export class RenderOp {
     this.op = op;
     this.options = {
       classPrefix: 'ql',
-      inlineStyles: undefined,
       listItemTag: 'li',
       mentionTag: 'a',
       paragraphTag: 'p',
@@ -155,7 +151,7 @@ export class RenderOp {
   }
 
   renderNode(): RenderNode {
-    const Tag = this.getTag();
+    const tags = this.getTags();
 
     let children: ReactNode = null;
     if (
@@ -165,23 +161,36 @@ export class RenderOp {
       children = this.op.insert.value;
     }
 
-    const attributes = this.getTagAttributes(Tag);
+    const attributes = this.getTagAttributes();
 
-    let render: RenderNode['render'];
+    const renderFns: Array<RenderNode['render']> = [];
 
-    if (Tag === 'img') {
-      if (this.op.attributes.link) {
-        render = () => (
-          <a {...this.getLinkAttrs()}>
-            <Tag {...attributes} />
-          </a>
-        );
-      } else {
-        render = () => <Tag {...attributes} />;
+    for (const Tag of Array.isArray(tags) ? tags : [tags]) {
+      if (Tag === 'img') {
+        if (this.op.attributes.link) {
+          // Special support for a link containing an image.
+          renderFns.push(() => (
+            <a {...this.getLinkAttrs()}>
+              <Tag {...attributes} />
+            </a>
+          ));
+        } else {
+          renderFns.push(() => <Tag {...attributes} />);
+        }
+        // Nothing can be inside an img.
+        break;
       }
-    } else {
-      render = (children) => <Tag {...attributes}>{children}</Tag>;
+      if (renderFns.length) {
+        renderFns.push((children) => <Tag>{children}</Tag>);
+      } else {
+        renderFns.push((children) => <Tag {...attributes}>{children}</Tag>);
+      }
     }
+
+    const render = renderFns.reduceRight(
+      (acc, fn) => (children) => fn(acc(children)),
+      (children) => children,
+    );
 
     return {
       render,
@@ -233,7 +242,7 @@ export class RenderOp {
     const styles: CSSProperties = {
       // Set border to none for video embeds but allow custom styles to override this.
       ...(this.op.isVideo() ? { border: 'none' } : {}),
-      ...this.getCustomCssStyles(),
+      ...this.options.customCssStyles?.(this.op),
     };
 
     for (const attribute of propsArr) {
@@ -293,13 +302,13 @@ export class RenderOp {
     return styles;
   }
 
-  getTagAttributes(tag: keyof JSX.IntrinsicElements): HTMLAttributes {
-    if (this.op.attributes.code && !this.op.isLink()) {
+  getTagAttributes(): HTMLAttributes {
+    if (this.op.attributes.code) {
       return {};
     }
 
     const tagAttrs: HTMLAttributes = {
-      ...this.options.customAttributes?.(this.op, tag),
+      ...this.options.customAttributes?.(this.op),
     };
 
     const style = this.getCssStyles();
@@ -410,10 +419,6 @@ export class RenderOp {
     return attrs;
   }
 
-  getCustomTag(format: string) {
-    return this.options.customTag?.apply(null, [format, this.op]);
-  }
-
   getCustomClasses() {
     if (this.options.customClasses) {
       const res = this.options.customClasses.apply(null, [this.op]);
@@ -424,11 +429,9 @@ export class RenderOp {
     return [];
   }
 
-  getCustomCssStyles() {
-    return this.options.customCssStyles?.apply(null, [this.op]);
-  }
-
-  getTag(): keyof JSX.IntrinsicElements {
+  private getTags():
+    | keyof JSX.IntrinsicElements
+    | Array<keyof JSX.IntrinsicElements> {
     // embeds
     if (!this.op.isText()) {
       return this.op.isVideo()
@@ -442,35 +445,36 @@ export class RenderOp {
     const { attributes } = this.op;
 
     // blocks
-    for (const item of blockTags) {
-      if (attributes[item]) {
-        const customTag = this.getCustomTag(item);
+    for (const format of blockTags) {
+      const value = attributes[format];
+      if (value) {
+        const customTag = this.options.customTag?.(format, this.op);
         if (customTag) {
           return customTag;
         }
-        switch (item) {
+        switch (format) {
           case 'blockquote':
-            return item;
+            return 'blockquote';
           case 'code-block':
             return 'pre';
           case 'list':
             return this.options.listItemTag || 'li';
           case 'header':
-            switch (attributes[item]?.toString()) {
-              case '1':
+            switch (value) {
+              case 1:
                 return 'h1';
-              case '2':
+              case 2:
                 return 'h2';
-              case '3':
+              case 3:
                 return 'h3';
-              case '4':
+              case 4:
                 return 'h4';
-              case '5':
+              case 5:
                 return 'h5';
-              case '6':
+              case 6:
                 return 'h6';
               default:
-                return 'h1';
+                return 'p';
             }
           case 'align':
           case 'direction':
@@ -482,37 +486,49 @@ export class RenderOp {
 
     if (this.op.isCustomTextBlock()) {
       return (
-        this.getCustomTag('renderAsBlock') || this.options.paragraphTag || 'p'
+        this.options.customTag?.('renderAsBlock', this.op) ||
+        this.options.paragraphTag ||
+        'p'
       );
     }
 
     // inlines
-    for (const item of inlineTags) {
-      if (attributes[item]) {
-        const customTag = this.getCustomTag(item);
+    const tags: Array<keyof JSX.IntrinsicElements> = [];
+
+    for (const format of inlineTags) {
+      const value = attributes[format];
+      if (value) {
+        const customTag = this.options.customTag?.(format, this.op);
         if (customTag) {
-          return customTag;
-        }
-        switch (item) {
-          case 'link':
-          case 'mentions':
-            return this.options.mentionTag || 'a';
-          case 'script':
-            return attributes[item] === ScriptType.Sub ? 'sub' : 'sup';
-          case 'bold':
-            return 'strong';
-          case 'italic':
-            return 'em';
-          case 'strike':
-            return 's';
-          case 'underline':
-            return 'u';
-          case 'code':
-            return 'code';
+          tags.push(customTag);
+        } else {
+          switch (format) {
+            case 'link':
+            case 'mentions':
+              tags.push(this.options.mentionTag || 'a');
+              break;
+            case 'script':
+              tags.push(value === ScriptType.Sub ? 'sub' : 'sup');
+              break;
+            case 'bold':
+              tags.push('strong');
+              break;
+            case 'italic':
+              tags.push('em');
+              break;
+            case 'strike':
+              tags.push('s');
+              break;
+            case 'underline':
+              tags.push('u');
+              break;
+            case 'code':
+              tags.push('code');
+          }
         }
       }
     }
 
-    return 'span';
+    return tags.length ? tags : 'span';
   }
 }

@@ -1,14 +1,14 @@
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { DeltaInsertOp } from '../../src/DeltaInsertOp.js';
-import { Grouper } from '../../src/grouper/Grouper.js';
-import { groupTables } from '../../src/grouper/TableGrouper.js';
+import { groupTables } from '../../src/grouper/group-tables.js';
 import {
   TableGroup,
   TableRow,
   TableCell,
   BlockGroup,
 } from '../../src/grouper/group-types.js';
+import { pairOpsWithTheirBlock } from '../../src/grouper/grouping.js';
 
 describe('TableGrouper', function () {
   describe('empty table', function () {
@@ -25,7 +25,7 @@ describe('TableGrouper', function () {
     ];
 
     it('should return table with 3 rows and 3 cells', function () {
-      var groups = Grouper.pairOpsWithTheirBlock(ops);
+      const groups = pairOpsWithTheirBlock(ops);
       var act = groupTables(groups);
       var exp = [
         new TableGroup([
@@ -60,7 +60,7 @@ describe('TableGrouper', function () {
     ];
 
     it('should return table with 1 row', function () {
-      var groups = Grouper.pairOpsWithTheirBlock(ops);
+      const groups = pairOpsWithTheirBlock(ops);
       var act = groupTables(groups);
       var exp = [
         new TableGroup([
@@ -84,7 +84,7 @@ describe('TableGrouper', function () {
     ];
 
     it('should return table with 1 col', function () {
-      var groups = Grouper.pairOpsWithTheirBlock(ops);
+      const groups = pairOpsWithTheirBlock(ops);
       var act = groupTables(groups);
       var exp = [
         new TableGroup([

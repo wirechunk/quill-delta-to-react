@@ -73,7 +73,7 @@ export class DeltaInsertOp {
     return op.attributes.header === this.attributes.header && this.isHeader();
   }
 
-  // adi: alignment direction indentation
+  // adi: align, direction, indent
   hasSameAdiAs(op: DeltaInsertOp) {
     return (
       this.attributes.align === op.attributes.align &&

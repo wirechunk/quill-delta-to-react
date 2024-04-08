@@ -3,9 +3,7 @@ import type { OpAttributeSanitizerOptions } from './OpAttributeSanitizer.js';
 // See https://github.com/quill-mention/quill-mention
 export type Mention = {
   class?: string;
-  name?: string;
   target?: string;
-  slug?: string;
   link?: string;
   [index: string]: unknown;
 };
@@ -28,26 +26,32 @@ export class MentionSanitizer {
       return cleanObj;
     }
 
-    if (
-      typeof dirtyObj.class === 'string' &&
-      MentionSanitizer.isValidClass(dirtyObj.class)
-    ) {
-      cleanObj.class = dirtyObj.class;
-    }
-
-    if (
-      typeof dirtyObj.target === 'string' &&
-      MentionSanitizer.isValidTarget(dirtyObj.target)
-    ) {
-      cleanObj.target = dirtyObj.target;
-    }
-
-    if (typeof dirtyObj.link === 'string') {
-      cleanObj.link = sanitizeOptions.urlSanitizer(dirtyObj.link);
-    }
-
-    if (typeof dirtyObj.slug === 'string') {
-      cleanObj.slug = dirtyObj.slug;
+    for (const [key, value] of Object.entries(dirtyObj)) {
+      switch (key) {
+        case 'class':
+          if (
+            typeof value === 'string' &&
+            MentionSanitizer.isValidClass(value)
+          ) {
+            cleanObj.class = value;
+          }
+          break;
+        case 'target':
+          if (
+            typeof value === 'string' &&
+            MentionSanitizer.isValidTarget(value)
+          ) {
+            cleanObj.target = value;
+          }
+          break;
+        case 'link':
+          if (typeof value === 'string') {
+            cleanObj.link = sanitizeOptions.urlSanitizer(value);
+          }
+          break;
+        default:
+          cleanObj[key] = value;
+      }
     }
 
     return cleanObj;
