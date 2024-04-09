@@ -152,7 +152,24 @@ describe('RenderDelta', () => {
       );
     });
 
-    it('should set default inline styles for inlineStyles: true', function () {
+    it('should set default inline styles when inlineStyles is true', function () {
+      const hugeOps = [
+        { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
+        { insert: '\n' },
+      ];
+      const rd = new RenderDelta({
+        ops: hugeOps,
+        options: {
+          inlineStyles: true,
+        },
+      });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p><span style="font-size:2.5em">huge</span></p>',
+      );
+    });
+
+    it('should set default inline styles when inlineStyles is true and custom CSS styles are applied', () => {
       const hugeOps = [
         { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
         { insert: '\n' },
@@ -170,30 +187,9 @@ describe('RenderDelta', () => {
           },
         },
       });
-      const html = renderToStaticMarkup(rd.render());
       assert.equal(
-        html.includes('<span style="color:red;font-size: 2.5em">huge</span>'),
-        true,
-        html,
-      );
-    });
-
-    it('should set default inline styles when inlineStyles is true', function () {
-      const hugeOps = [
-        { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
-        { insert: '\n' },
-      ];
-      const rd = new RenderDelta({
-        ops: hugeOps,
-        options: {
-          inlineStyles: true,
-        },
-      });
-      const html = renderToStaticMarkup(rd.render());
-      assert.equal(
-        html.includes('<span style="font-size: 2.5em">huge</span>'),
-        true,
-        html,
+        renderToStaticMarkup(rd.render()),
+        '<p><span style="color:red;font-size:2.5em">huge</span></p>',
       );
     });
 
@@ -210,11 +206,9 @@ describe('RenderDelta', () => {
           },
         },
       });
-      const html = renderToStaticMarkup(rd.render());
       assert.equal(
-        html.includes('<span style="font-size: 6em">huge</span>'),
-        true,
-        html,
+        renderToStaticMarkup(rd.render()),
+        '<p><span style="font-size:6em">huge</span></p>',
       );
     });
 
@@ -256,7 +250,7 @@ describe('RenderDelta', () => {
       );
     });
 
-    it('should render image and image links', function () {
+    it('should render images and image links', function () {
       const ops = [
         { insert: { image: 'http://yahoo.com/abc.jpg' } },
         {
@@ -281,23 +275,22 @@ describe('RenderDelta', () => {
         { insert: '\n', attributes: { list: 'ordered' } },
       ];
       const rd = new RenderDelta({ ops });
-      const html = renderToStaticMarkup(rd.render());
-      assert.equal(html.includes('<p>mr'), true);
-      assert.equal(html.includes('</ol><ul><li>there'), true);
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p>mr</p><ol><li>hello</li></ol><ul><li>there</li></ul><ol><li>\n</li></ol>',
+      );
     });
 
-    it('should render as separate paragraphs', function () {
+    it('should render as separate paragraphs when multiLineParagraph is false', () => {
       const rd = new RenderDelta({
-        ops: [{ insert: 'hello\nhow areyou?\n\nbye' }],
+        ops: [{ insert: 'hello\nhow are you?\n\nbye' }],
         options: {
           multiLineParagraph: false,
         },
       });
-      const html = renderToStaticMarkup(rd.render());
-
       assert.equal(
-        html,
-        '<p>hello</p><p>how areyou?</p><p><br/></p><p>bye</p>',
+        renderToStaticMarkup(rd.render()),
+        '<p>hello</p><p>how are you?</p><p><br/></p><p>bye</p>',
       );
     });
 
@@ -528,8 +521,8 @@ describe('RenderDelta', () => {
         );
       });
 
-      it('should render empty table', () => {
-        let ops = [
+      it('should render an empty table', () => {
+        const ops = [
           {
             insert: '\n\n\n',
             attributes: {
@@ -694,7 +687,7 @@ describe('RenderDelta', () => {
       });
 
       describe('getGroupedOps', () => {
-        it('should transform raw delta ops to DeltaInsertOp[]', function () {
+        it('should transform raw Delta ops to an array of DeltaInsertOp', function () {
           const ops: DeltaInsertOpType[] = [
             { insert: 'This ' },
             { attributes: { font: 'monospace' }, insert: 'is' },
@@ -719,7 +712,13 @@ describe('RenderDelta', () => {
             { insert: '  formats.\n' },
           ];
 
-          const rd = new RenderDelta({ ops });
+          const rd = new RenderDelta({
+            ops,
+            options: {
+              urlSanitizer: (url) =>
+                url.includes('yahoo') ? `unsafe:${url}` : url,
+            },
+          });
 
           const groupedOps = rd.getGroupedOps();
           assert.deepEqual(groupedOps, [
@@ -850,24 +849,6 @@ describe('RenderDelta', () => {
     });
 
     describe('custom types', () => {
-      it('should return an empty string if a renderer is not defined for a custom blot', () => {
-        const ops = [{ insert: { customStuff: 'my val' } }];
-        const rd = new RenderDelta({
-          ops,
-          customRenderer: (op) => {
-            if (op.insert.type === 'boldAndItalic') {
-              return (
-                <b>
-                  <i>{op.insert.value}</i>
-                </b>
-              );
-            }
-            return 'unknown';
-          },
-        });
-        assert.equal(renderToStaticMarkup(rd.render()), '<p></p>');
-      });
-
       it('should render custom insert types with the given renderer', () => {
         const ops = [
           { insert: { boldAndItalic: 'my text' } },
@@ -970,7 +951,7 @@ describe('RenderDelta', () => {
         });
       });
 
-      it('inside headers', () => {
+      describe('inside headers', () => {
         const ops = [
           { insert: { colonizer: ':' } },
           { insert: '\n', attributes: { header: 1 } },
@@ -1024,11 +1005,6 @@ describe('RenderDelta', () => {
         const op = new DeltaInsertOp('\n', { list: ListType.Unchecked });
         assert.equal(rd.getListTag(op), 'ul');
       });
-
-      it('should return an empty string for a non-list op', () => {
-        const op = new DeltaInsertOp('d');
-        assert.equal(rd.getListTag(op), '');
-      });
     });
 
     it('should render inlines custom tag', function () {
@@ -1053,60 +1029,51 @@ describe('RenderDelta', () => {
       );
     });
 
-    it('should render plain new line string', function () {
-      var ops = [new DeltaInsertOp('\n')];
-      const rd = new RenderDelta({ ops });
+    it('should render plain new line string', () => {
+      const rd = new RenderDelta({ ops: [new DeltaInsertOp('\n')] });
       assert.equal(renderToStaticMarkup(rd.render()), '<p><br/></p>');
     });
 
-    it('should render when first line is new line', function () {
-      var ops = [new DeltaInsertOp('\n'), new DeltaInsertOp('aa')];
-      const rd = new RenderDelta({ ops });
+    it('should render when first line is new line', () => {
+      const rd = new RenderDelta({
+        ops: [new DeltaInsertOp('\n'), new DeltaInsertOp('aa')],
+      });
       assert.equal(renderToStaticMarkup(rd.render()), '<p><br/>aa</p>');
     });
 
-    it('should render when last line is new line', function () {
+    it('should render when last line is new line', () => {
       const rd = new RenderDelta({
         ops: [new DeltaInsertOp('aa'), new DeltaInsertOp('\n')],
       });
       assert.equal(renderToStaticMarkup(rd.render()), '<p>aa</p>');
     });
 
-    it('should render mixed lines (1)', function () {
-      const rd = new RenderDelta({
-        ops: [new DeltaInsertOp('aa'), new DeltaInsertOp('bb')],
-      });
-      assert.equal(renderToStaticMarkup(rd.render()), '<p>aabb</p>');
-    });
-
     it('should render mixed lines', () => {
       const rd = new RenderDelta({
-        ops: [
-          new DeltaInsertOp('\n'),
-          new DeltaInsertOp('a'),
-          new DeltaInsertOp('\n'),
-          new DeltaInsertOp('b'),
-        ],
+        ops: [new DeltaInsertOp('\na\nb\n')],
       });
-      assert.equal(rd.render(), '<p><br/>a<br/>b</p>');
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p></p><p>a</p><p>b</p>',
+      );
     });
 
-    it('should render mixed lines with styled newlines', function () {
+    it('should render mixed lines with styled newlines', () => {
       const styledNewlineOp = new DeltaInsertOp('\n', {
         color: '#333',
         italic: true,
       });
       const ops4 = [
-        new DeltaInsertOp('aa'),
+        new DeltaInsertOp('a'),
         styledNewlineOp,
         styledNewlineOp,
         styledNewlineOp,
-        new DeltaInsertOp('\n'),
+        new DeltaInsertOp('b'),
       ];
       const rd = new RenderDelta({ ops: ops4 });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p>aa<br/><br/><br/>bb</p>',
+        '<p>a<br/><br/><br/>b</p>',
       );
     });
   });

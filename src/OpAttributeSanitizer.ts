@@ -6,7 +6,6 @@ import {
 } from './value-types.js';
 import { MentionSanitizer } from './MentionSanitizer.js';
 import type { Mention } from './MentionSanitizer.js';
-import type { OptionalAttributes } from 'quill';
 
 export type OpAttributes = {
   background?: string | undefined;
@@ -47,9 +46,25 @@ export type OpAttributeSanitizerOptions = {
   urlSanitizer: (url: string) => string;
 };
 
+const validFontNameRegex = /^[a-z0-9 -]{1,50}$/i;
+
+const validRelRegex = /^[a-z\s\-]{1,250}$/i;
+
+const validTargetRegex = /^[\w-]{1,50}$/i;
+
+const alignTypes = Object.values(AlignType);
+
+const isAlignType = (align: unknown): align is AlignType =>
+  alignTypes.includes(align as never);
+
+const listTypes = Object.values(ListType);
+
+const isListType = (list: unknown): list is ListType =>
+  listTypes.includes(list as never);
+
 export class OpAttributeSanitizer {
   static sanitize(
-    dirtyAttrs: OptionalAttributes['attributes'],
+    dirtyAttrs: Record<string | number | symbol, unknown>,
     sanitizeOptions: OpAttributeSanitizerOptions,
   ): OpAttributes {
     const cleanAttrs: OpAttributes = {};
@@ -118,10 +133,10 @@ export class OpAttributeSanitizer {
     });
 
     colorAttrs.forEach((prop) => {
-      const val: unknown = dirtyAttrs[prop];
+      const val = dirtyAttrs[prop];
       if (
         typeof val === 'string' &&
-        (OpAttributeSanitizer.IsValidHexColor(val) ||
+        (OpAttributeSanitizer.isValidHexColor(val) ||
           OpAttributeSanitizer.IsValidColorLiteral(val) ||
           OpAttributeSanitizer.IsValidRGBColor(val))
       ) {
@@ -129,11 +144,14 @@ export class OpAttributeSanitizer {
       }
     });
 
-    if (font && OpAttributeSanitizer.IsValidFontName(font + '')) {
+    if (
+      typeof font === 'string' &&
+      OpAttributeSanitizer.isValidFontName(font)
+    ) {
       cleanAttrs.font = font;
     }
 
-    if (size && OpAttributeSanitizer.IsValidSize(size + '')) {
+    if (typeof size === 'string' && OpAttributeSanitizer.isValidSize(size)) {
       cleanAttrs.size = size;
     }
 
@@ -148,32 +166,34 @@ export class OpAttributeSanitizer {
     if (link && typeof link === 'string') {
       cleanAttrs.link = sanitizeOptions.urlSanitizer(link);
     }
-    if (target && OpAttributeSanitizer.isValidTarget(target)) {
+
+    if (
+      typeof target === 'string' &&
+      OpAttributeSanitizer.isValidTarget(target)
+    ) {
       cleanAttrs.target = target;
     }
 
-    if (rel && OpAttributeSanitizer.IsValidRel(rel)) {
+    if (typeof rel === 'string' && OpAttributeSanitizer.IsValidRel(rel)) {
       cleanAttrs.rel = rel;
     }
 
     if (codeBlock) {
-      if (OpAttributeSanitizer.IsValidLang(codeBlock)) {
+      if (
+        typeof codeBlock === 'string' &&
+        OpAttributeSanitizer.IsValidLang(codeBlock)
+      ) {
         cleanAttrs['code-block'] = codeBlock;
       } else {
         cleanAttrs['code-block'] = !!codeBlock;
       }
     }
 
-    if (script === ScriptType.Sub || ScriptType.Super === script) {
+    if (script === ScriptType.Sub || script === ScriptType.Super) {
       cleanAttrs.script = script;
     }
 
-    if (
-      list === ListType.Bullet ||
-      list === ListType.Ordered ||
-      list === ListType.Checked ||
-      list === ListType.Unchecked
-    ) {
+    if (isListType(list)) {
       cleanAttrs.list = list;
     }
 
@@ -184,14 +204,7 @@ export class OpAttributeSanitizer {
       ) as 1 | 2 | 3 | 4 | 5 | 6;
     }
 
-    if (
-      [
-        AlignType.Center,
-        AlignType.Right,
-        AlignType.Justify,
-        AlignType.Left,
-      ].find((a) => a === align)
-    ) {
+    if (isAlignType(align)) {
       cleanAttrs.align = align;
     }
 
@@ -204,25 +217,20 @@ export class OpAttributeSanitizer {
     }
 
     if (mentions && mention) {
-      const sanitizedMention = MentionSanitizer.sanitize(
-        mention,
-        sanitizeOptions,
-      );
-      if (Object.keys(sanitizedMention).length > 0) {
-        cleanAttrs.mentions = !!mentions;
-        cleanAttrs.mention = mention;
-      }
+      cleanAttrs.mentions = !!mentions;
+      cleanAttrs.mention = MentionSanitizer.sanitize(mention, sanitizeOptions);
     }
+
     return Object.keys(dirtyAttrs).reduce((cleaned, k) => {
-      // this is a custom attr, put it back
-      if (sanitizedAttrs.indexOf(k) === -1) {
-        cleaned[k] = (<any>dirtyAttrs)[k];
+      // This is a custom attribute. Put it back.
+      if (!sanitizedAttrs.includes(k)) {
+        cleaned[k] = dirtyAttrs[k];
       }
       return cleaned;
     }, cleanAttrs);
   }
 
-  static IsValidHexColor(colorStr: string) {
+  static isValidHexColor(colorStr: string) {
     return !!colorStr.match(/^#([0-9A-F]{6}|[0-9A-F]{3})$/i);
   }
 
@@ -236,11 +244,11 @@ export class OpAttributeSanitizer {
     return !!colorStr.match(re);
   }
 
-  static IsValidFontName(fontName: string) {
-    return !!fontName.match(/^[a-z\s0-9\- ]{1,30}$/i);
+  static isValidFontName(fontName: string) {
+    return validFontNameRegex.test(fontName);
   }
 
-  static IsValidSize(size: string) {
+  static isValidSize(size: string) {
     return !!size.match(/^[a-z0-9\-]{1,20}$/i);
   }
 
@@ -249,11 +257,11 @@ export class OpAttributeSanitizer {
   }
 
   static isValidTarget(target: string) {
-    return !!target.match(/^[_a-zA-Z0-9\-]{1,50}$/);
+    return validTargetRegex.test(target);
   }
 
   static IsValidRel(relStr: string) {
-    return !!relStr.match(/^[a-zA-Z\s\-]{1,250}$/i);
+    return validRelRegex.test(relStr);
   }
 
   static IsValidLang(lang: string | boolean) {

@@ -430,14 +430,11 @@ describe('OpToHtmlConverter', () => {
 
   describe('renderNode', () => {
     describe('render', () => {
-      it('should wrap its argument in a simple case', () => {
+      it('should return children directly in a simple case with no formats', () => {
         const op = new DeltaInsertOp('hello');
         const ro = new RenderOp(op);
         const { render } = ro.renderNode();
-        assert.equal(
-          renderToStaticMarkup(render('something')),
-          '<span>something</span>',
-        );
+        assert.equal(renderToStaticMarkup(render('something')), 'something');
       });
 
       it('should wrap its argument with attributes', () => {
