@@ -2,9 +2,9 @@
   "name": "quill-delta-to-react",
   "version": "0.1.0",
   "description": "Converts Quill's Delta ops to React",
-  "main": "./dist/commonjs/main.js",
   "type": "module",
-  "types": "./dist/commonjs/main.d.ts",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
   "dependencies": {
     "lodash.isequal": "^4.5.0"
   },

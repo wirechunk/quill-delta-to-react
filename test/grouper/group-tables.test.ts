@@ -9,19 +9,39 @@ import {
   BlockGroup,
 } from '../../src/grouper/group-types.js';
 import { pairOpsWithTheirBlock } from '../../src/grouper/grouping.js';
+import { InsertDataQuill } from '../../src/InsertData.js';
+import { DataType } from '../../src/value-types.js';
 
 describe('TableGrouper', function () {
   describe('empty table', function () {
     var ops = [
-      new DeltaInsertOp('\n', { table: 'row-1' }),
-      new DeltaInsertOp('\n', { table: 'row-1' }),
-      new DeltaInsertOp('\n', { table: 'row-1' }),
-      new DeltaInsertOp('\n', { table: 'row-2' }),
-      new DeltaInsertOp('\n', { table: 'row-2' }),
-      new DeltaInsertOp('\n', { table: 'row-2' }),
-      new DeltaInsertOp('\n', { table: 'row-3' }),
-      new DeltaInsertOp('\n', { table: 'row-3' }),
-      new DeltaInsertOp('\n', { table: 'row-3' }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-1',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-1',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-1',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-2',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-2',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-2',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-3',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-3',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-3',
+      }),
     ];
 
     it('should return table with 3 rows and 3 cells', function () {
@@ -53,10 +73,14 @@ describe('TableGrouper', function () {
 
   describe('single 1 row table', function () {
     var ops = [
-      new DeltaInsertOp('cell1'),
-      new DeltaInsertOp('\n', { table: 'row-1' }),
-      new DeltaInsertOp('cell2'),
-      new DeltaInsertOp('\n', { table: 'row-1' }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'cell1')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-1',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'cell2')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-1',
+      }),
     ];
 
     it('should return table with 1 row', function () {
@@ -77,10 +101,14 @@ describe('TableGrouper', function () {
 
   describe('single 1 col table', function () {
     var ops = [
-      new DeltaInsertOp('cell1'),
-      new DeltaInsertOp('\n', { table: 'row-1' }),
-      new DeltaInsertOp('cell2'),
-      new DeltaInsertOp('\n', { table: 'row-2' }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'cell1')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-1',
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'cell2')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        table: 'row-2',
+      }),
     ];
 
     it('should return table with 1 col', function () {

@@ -11,6 +11,7 @@ import { DeltaInsertOp } from './DeltaInsertOp.js';
 import { ScriptType } from './value-types.js';
 import { OpAttributes, OpAttributeSanitizer } from './OpAttributeSanitizer.js';
 import { Property } from 'csstype';
+import { InsertData } from './InsertData.js';
 
 export type InlineStyleFn = (
   value: string | number | boolean,
@@ -123,16 +124,11 @@ export type OpToNodeConverterOptions = {
   customCssStyles?: (op: DeltaInsertOp) => CSSProperties | undefined;
 };
 
-export type RenderNode = {
-  render: (children: ReactNode) => ReactNode;
-  node: ReactNode;
-};
-
-export class RenderOp {
+export class RenderOp<Insert extends InsertData> {
   private readonly options: OpToNodeConverterOptions;
-  private readonly op: DeltaInsertOp;
+  private readonly op: DeltaInsertOp<Insert>;
 
-  constructor(op: DeltaInsertOp, options?: OpToNodeConverterOptions) {
+  constructor(op: DeltaInsertOp<Insert>, options?: OpToNodeConverterOptions) {
     this.op = op;
     this.options = {
       classPrefix: 'ql',
@@ -150,15 +146,7 @@ export class RenderOp {
     return className;
   }
 
-  renderNode(): RenderNode {
-    let children: ReactNode = null;
-    if (
-      !this.op.isContainerBlock() &&
-      (this.op.isMentions() || this.op.isFormula() || this.op.isText())
-    ) {
-      children = this.op.insert.value;
-    }
-
+  renderOp(children: ReactNode): ReactNode {
     const tags = this.getTags();
     const attributes = this.getTagAttributes();
 
@@ -170,7 +158,7 @@ export class RenderOp {
       tags.push('span');
     }
 
-    const renderFns: Array<RenderNode['render']> = [];
+    const renderFns: Array<(children: ReactNode) => ReactNode> = [];
 
     for (const Tag of Array.isArray(tags) ? tags : [tags]) {
       if (Tag === 'img') {
@@ -187,6 +175,11 @@ export class RenderOp {
         // Nothing can be inside an img.
         break;
       }
+      if (Tag === 'iframe') {
+        // Nothing can be inside an iframe.
+        renderFns.push(() => <Tag {...attributes} />);
+        break;
+      }
       if (renderFns.length) {
         renderFns.push((children) => <Tag>{children}</Tag>);
       } else {
@@ -194,15 +187,10 @@ export class RenderOp {
       }
     }
 
-    const render = renderFns.reduceRight(
+    return renderFns.reduceRight(
       (acc, fn) => (children) => fn(acc(children)),
       (children) => children,
-    );
-
-    return {
-      render,
-      node: render(children),
-    };
+    )(children);
   }
 
   getClasses(): string[] {

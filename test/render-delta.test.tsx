@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
-import { DeltaInsertOp, DeltaInsertOpType } from './../src/DeltaInsertOp.js';
+import { DeltaInsertOp } from './../src/DeltaInsertOp.js';
 import { CustomRenderer, RenderDelta } from './../src/render-delta.js';
 import { DataType, ListType, ScriptType } from './../src/value-types.js';
 import { InsertDataCustom, InsertDataQuill } from '../src/InsertData.js';
@@ -688,7 +688,7 @@ describe('RenderDelta', () => {
 
       describe('getGroupedOps', () => {
         it('should transform raw Delta ops to an array of DeltaInsertOp', function () {
-          const ops: DeltaInsertOpType[] = [
+          const ops = [
             { insert: 'This ' },
             { attributes: { font: 'monospace' }, insert: 'is' },
             { insert: ' a ' },
@@ -723,40 +723,64 @@ describe('RenderDelta', () => {
           const groupedOps = rd.getGroupedOps();
           assert.deepEqual(groupedOps, [
             new InlineGroup([
-              new DeltaInsertOp('This '),
-              new DeltaInsertOp('is', { font: 'monospace' }),
-              new DeltaInsertOp(' a '),
-              new DeltaInsertOp('test', { size: 'large' }),
-              new DeltaInsertOp(' '),
-              new DeltaInsertOp('data', { italic: true, bold: true }),
-              new DeltaInsertOp(' '),
-              new DeltaInsertOp('that', { underline: true, strike: true }),
-              new DeltaInsertOp(' is '),
-              new DeltaInsertOp('will', { color: '#e60000' }),
-              new DeltaInsertOp(' '),
-              new DeltaInsertOp('test', { background: '#ffebcc' }),
-              new DeltaInsertOp(' '),
-              new DeltaInsertOp('the', { script: ScriptType.Sub }),
-              new DeltaInsertOp(' '),
-              new DeltaInsertOp('rendering', { script: ScriptType.Super }),
-              new DeltaInsertOp(' of '),
-              new DeltaInsertOp('inline', { link: 'unsafe:yahoo' }),
-              new DeltaInsertOp(' '),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'This ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'is'), {
+                font: 'monospace',
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' a ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'test'), {
+                size: 'large',
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'data'), {
+                italic: true,
+                bold: true,
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'that'), {
+                underline: true,
+                strike: true,
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' is ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'will'), {
+                color: '#e60000',
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'test'), {
+                background: '#ffebcc',
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'the'), {
+                script: ScriptType.Sub,
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+              new DeltaInsertOp(
+                new InsertDataQuill(DataType.Text, 'rendering'),
+                { script: ScriptType.Super },
+              ),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' of ')),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'inline'), {
+                link: 'unsafe:yahoo',
+              }),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
               new DeltaInsertOp(
                 new InsertDataQuill(DataType.Formula, 'x=data'),
               ),
-              new DeltaInsertOp('  formats.'),
-              new DeltaInsertOp('\n'),
+              new DeltaInsertOp(
+                new InsertDataQuill(DataType.Text, '  formats.'),
+              ),
+              new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
             ]),
           ]);
         });
 
         it('should transform raw custom ops', () => {
-          const ops: DeltaInsertOpType[] = [{ insert: { cake: 'chocolate' } }];
-          const rd = new RenderDelta({ ops });
+          const rd = new RenderDelta({
+            ops: [{ insert: { cake: 'chocolate' } }],
+          });
           assert.deepEqual(rd.getGroupedOps(), [
             new InlineGroup([
-              new DeltaInsertOp(new InsertDataCustom('cake', 'chocolate')),
+              new DeltaInsertOp(new InsertDataCustom({ cake: 'chocolate' })),
             ]),
           ]);
         });
@@ -857,10 +881,10 @@ describe('RenderDelta', () => {
         const rd = new RenderDelta({
           ops,
           customRenderer: (op) => {
-            if (op.insert.type === 'boldAndItalic') {
+            if ('boldAndItalic' in op.insert) {
               return (
                 <b>
-                  <i>{op.insert.value}</i>
+                  <i>{op.insert.boldAndItalic as string}</i>
                 </b>
               );
             }
@@ -885,12 +909,12 @@ describe('RenderDelta', () => {
         ];
         const rd = new RenderDelta({
           ops,
-          customRenderer: (op) => {
-            if (op.insert.type === 'myBlot') {
-              return op.attributes.renderAsBlock ? (
-                <div>{op.insert.value}</div>
+          customRenderer: ({ insert, attributes }) => {
+            if ('myBlot' in insert && typeof insert.myBlot === 'string') {
+              return attributes.renderAsBlock ? (
+                <div>{insert.myBlot}</div>
               ) : (
-                op.insert.value
+                insert.myBlot
               );
             }
             return 'unknown';
@@ -913,8 +937,8 @@ describe('RenderDelta', () => {
         ];
 
         const customRenderer: CustomRenderer = (op) => {
-          if (op.insert.type === 'colonizer') {
-            return op.insert.value;
+          if ('colonizer' in op.insert) {
+            return op.insert.colonizer as string;
           }
           return null;
         };
@@ -962,8 +986,8 @@ describe('RenderDelta', () => {
         ];
 
         const customRenderer: CustomRenderer = (op) => {
-          if (op.insert.type === 'colonizer') {
-            return op.insert.value;
+          if ('colonizer' in op.insert) {
+            return op.insert.colonizer as string;
           }
           return '';
         };
@@ -987,22 +1011,30 @@ describe('RenderDelta', () => {
       const rd = new RenderDelta({ ops: [] });
 
       it('should return the expected list tag for an ordered list', () => {
-        const op = new DeltaInsertOp('\n', { list: ListType.Ordered });
+        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+          list: ListType.Ordered,
+        });
         assert.equal(rd.getListTag(op), 'ol');
       });
 
       it('should return the expected list tag for a bullet list', () => {
-        const op = new DeltaInsertOp('\n', { list: ListType.Bullet });
+        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+          list: ListType.Bullet,
+        });
         assert.equal(rd.getListTag(op), 'ul');
       });
 
       it('should return the expected list tag for a checked list', () => {
-        const op = new DeltaInsertOp('\n', { list: ListType.Checked });
+        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+          list: ListType.Checked,
+        });
         assert.equal(rd.getListTag(op), 'ul');
       });
 
       it('should return the expected list tag for an unchecked list', () => {
-        const op = new DeltaInsertOp('\n', { list: ListType.Unchecked });
+        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+          list: ListType.Unchecked,
+        });
         assert.equal(rd.getListTag(op), 'ul');
       });
     });
@@ -1030,27 +1062,37 @@ describe('RenderDelta', () => {
     });
 
     it('should render plain new line string', () => {
-      const rd = new RenderDelta({ ops: [new DeltaInsertOp('\n')] });
+      const rd = new RenderDelta({
+        ops: [new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'))],
+      });
       assert.equal(renderToStaticMarkup(rd.render()), '<p><br/></p>');
     });
 
     it('should render when first line is new line', () => {
       const rd = new RenderDelta({
-        ops: [new DeltaInsertOp('\n'), new DeltaInsertOp('aa')],
+        ops: [
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa')),
+        ],
       });
       assert.equal(renderToStaticMarkup(rd.render()), '<p><br/>aa</p>');
     });
 
     it('should render when last line is new line', () => {
       const rd = new RenderDelta({
-        ops: [new DeltaInsertOp('aa'), new DeltaInsertOp('\n')],
+        ops: [
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+        ],
       });
       assert.equal(renderToStaticMarkup(rd.render()), '<p>aa</p>');
     });
 
     it('should render mixed lines', () => {
       const rd = new RenderDelta({
-        ops: [new DeltaInsertOp('\na\nb\n')],
+        ops: [
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\na\nb\n')),
+        ],
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
@@ -1059,16 +1101,19 @@ describe('RenderDelta', () => {
     });
 
     it('should render mixed lines with styled newlines', () => {
-      const styledNewlineOp = new DeltaInsertOp('\n', {
-        color: '#333',
-        italic: true,
-      });
+      const styledNewlineOp = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, '\n'),
+        {
+          color: '#333',
+          italic: true,
+        },
+      );
       const ops4 = [
-        new DeltaInsertOp('a'),
+        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'a')),
         styledNewlineOp,
         styledNewlineOp,
         styledNewlineOp,
-        new DeltaInsertOp('b'),
+        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'b')),
       ];
       const rd = new RenderDelta({ ops: ops4 });
       assert.equal(

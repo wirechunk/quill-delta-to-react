@@ -1,23 +1,21 @@
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-
 import {
   denormalizeInsertOp,
   tokenizeWithNewLines,
-} from '../src/denormalizeInsertOp.js';
-import { DeltaInsertOpType } from '../src/DeltaInsertOp.js';
+} from '../src/denormalize.js';
 
-describe('denormalizeInsertOp', function () {
+describe('denormalizeInsertOp', () => {
   it('should return a denormalized op as an array of ops', function () {
-    const op1: DeltaInsertOpType = { insert: '\n' };
+    const op1 = { insert: '\n' };
     const got1 = denormalizeInsertOp({ insert: '\n' });
     assert.deepEqual(got1, [op1]);
 
-    const op2: DeltaInsertOpType = { insert: 'abcd' };
+    const op2 = { insert: 'abcd' };
     const got2 = denormalizeInsertOp(op2);
     assert.deepEqual(got2, [op2]);
 
-    const op3: DeltaInsertOpType = {
+    const op3 = {
       insert: 'abc\n',
       attributes: { link: 'cold' },
     };
@@ -26,7 +24,7 @@ describe('denormalizeInsertOp', function () {
     assert.equal(got3[0].insert, 'abc');
     assert.equal(got3[0].attributes?.link, 'cold');
 
-    const op4: DeltaInsertOpType = {
+    const op4 = {
       insert: '\n\n',
       attributes: { bold: true },
     };

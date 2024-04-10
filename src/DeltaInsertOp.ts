@@ -4,40 +4,14 @@ import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import isEqual from 'lodash.isequal';
 import { newLine } from './constants.js';
 
-const isNonNullObject = (obj: unknown): obj is Record<string, unknown> =>
-  !!obj && typeof obj === 'object';
-
-export type DeltaInsertOpType = {
-  insert: string | Record<string, unknown>;
-  attributes?: Record<string, unknown> | null;
-};
-
-// A basic structural check.
-export const isDeltaInsertOp = (op: unknown): op is DeltaInsertOpType =>
-  !!op &&
-  typeof op === 'object' &&
-  (typeof (op as DeltaInsertOpType).insert === 'string' ||
-    isNonNullObject((op as DeltaInsertOpType).insert)) &&
-  (!(op as DeltaInsertOpType).attributes ||
-    typeof (op as DeltaInsertOpType).attributes === 'object');
-
-export class DeltaInsertOp {
-  readonly insert: InsertData;
-  readonly attributes: OpAttributes;
-
+export class DeltaInsertOp<Insert extends InsertData = InsertData> {
   constructor(
-    insertVal: InsertData | string,
-    attrs?: OpAttributes | undefined,
-  ) {
-    if (typeof insertVal === 'string') {
-      insertVal = new InsertDataQuill(DataType.Text, insertVal);
-    }
-    this.insert = insertVal;
-    this.attributes = attrs || {};
-  }
+    readonly insert: Insert,
+    readonly attributes: OpAttributes = {},
+  ) {}
 
   static createNewLineOp() {
-    return new DeltaInsertOp(newLine);
+    return new DeltaInsertOp(new InsertDataQuill(DataType.Text, newLine));
   }
 
   isContainerBlock() {
@@ -91,10 +65,11 @@ export class DeltaInsertOp {
   }
 
   isInline() {
-    return !(
-      this.isContainerBlock() ||
-      this.isVideo() ||
-      this.isCustomEmbedBlock()
+    return (
+      !this.isContainerBlock() &&
+      (this.insert instanceof InsertDataQuill
+        ? this.insert.type !== DataType.Video
+        : !this.attributes.renderAsBlock)
     );
   }
 
@@ -158,31 +133,43 @@ export class DeltaInsertOp {
     );
   }
 
-  isText() {
-    return this.insert.type === DataType.Text;
+  isText(): this is DeltaInsertOp<InsertDataQuill<DataType.Text>> {
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Text
+    );
   }
 
   isImage() {
-    return this.insert.type === DataType.Image;
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Image
+    );
   }
 
-  isFormula() {
-    return this.insert.type === DataType.Formula;
+  isFormula(): this is DeltaInsertOp<InsertDataQuill<DataType.Text>> {
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Formula
+    );
   }
 
-  isVideo() {
-    return this.insert.type === DataType.Video;
+  isVideo(): this is DeltaInsertOp<InsertDataQuill<DataType.Video>> {
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Video
+    );
   }
 
   isLink() {
     return this.isText() && !!this.attributes.link;
   }
 
-  isCustomEmbed() {
+  isCustomEmbed(): this is DeltaInsertOp<InsertDataCustom> {
     return this.insert instanceof InsertDataCustom;
   }
 
-  isCustomEmbedBlock() {
+  isCustomEmbedBlock(): this is DeltaInsertOp<InsertDataCustom> {
     return this.isCustomEmbed() && !!this.attributes.renderAsBlock;
   }
 
@@ -190,7 +177,7 @@ export class DeltaInsertOp {
     return this.isText() && !!this.attributes.renderAsBlock;
   }
 
-  isMentions() {
+  isMentions(): this is DeltaInsertOp<InsertDataQuill<DataType.Text>> {
     return this.isText() && !!this.attributes.mentions;
   }
 }

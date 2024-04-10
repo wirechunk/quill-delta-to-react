@@ -6,12 +6,12 @@ Converts [Quill's](https://quilljs.com) [Delta](https://quilljs.com/docs/delta/)
 
 Installation
 ```
-npm install quill-delta-to-html
+npm install quill-delta-to-react
 ```
 
 Usage
 ```javascript
-var QuillDeltaToHtmlConverter = require('quill-delta-to-html').QuillDeltaToHtmlConverter;
+import { RenderDelta } from 'quill-delta-to-react';
 
 // TypeScript / ES6:
 // import { QuillDeltaToHtmlConverter } from 'quill-delta-to-html'; 
@@ -87,21 +87,6 @@ Keys to this object are the names of attributes from Quill. The values are eithe
 ## Advanced Custom Rendering Using Grouped Ops
 
 If you want to do the full rendering yourself, you can do so by getting the processed and grouped ops.
-
-```javascript
-const groupedOps = converter.getGroupedOps();
-```
-
-Each element in the array will be an instance of the following types: 
-
-|type| properties                                  |
-|---|---------------------------------------------|
-|`InlineGroup`| ops: Array<`op object`>                     |
-|`VideoItem`| op: `op object`                             |
-|`BlockGroup`| op: `op object`, ops: Array<`op object`>    |
-|`ListGroup`| items: Array<`ListItem`>                    |
-|`ListItem`| item:`BlockGroup`, innerList:`ListGroup` |
-|`BlotBlock`| op: `op object`                             |
 
 `BlotBlock` represents custom blots with `renderAsBlock:true` property pair in its attributes
 

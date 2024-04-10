@@ -8,23 +8,42 @@ import {
   InlineGroup,
   BlockGroup,
 } from './../../src/grouper/group-types.js';
-import { ListType } from './../../src/value-types.js';
+import { DataType, ListType } from './../../src/value-types.js';
 import { pairOpsWithTheirBlock } from '../../src/grouper/grouping.js';
+import { InsertDataQuill } from '../../src/InsertData.js';
 
 describe('nestLists', function () {
   it('should not nest different types of lists', function () {
     var ops = [
-      new DeltaInsertOp('ordered list 1 item 1'),
-      new DeltaInsertOp('\n', { list: ListType.Ordered }),
-      new DeltaInsertOp('bullet list 1 item 1'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet }),
-      new DeltaInsertOp('bullet list 1 item 2'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet }),
-      new DeltaInsertOp('haha'),
-      new DeltaInsertOp('\n'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet }),
-      new DeltaInsertOp('\n', { list: ListType.Checked }),
-      new DeltaInsertOp('\n', { list: ListType.Unchecked }),
+      new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, 'ordered list 1 item 1'),
+      ),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+      }),
+      new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, 'bullet list 1 item 1'),
+      ),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+      }),
+      new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, 'bullet list 1 item 2'),
+      ),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'haha')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Checked,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Unchecked,
+      }),
     ];
 
     const groups = pairOpsWithTheirBlock(ops);
@@ -47,18 +66,33 @@ describe('nestLists', function () {
 
   it('should nest a simple list', () => {
     const ops = [
-      new DeltaInsertOp('a'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet }),
-      new DeltaInsertOp('b'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet }),
-      new DeltaInsertOp('c'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet, indent: 1 }),
-      new DeltaInsertOp('d'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet, indent: 1 }),
-      new DeltaInsertOp('e'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet }),
-      new DeltaInsertOp('f'),
-      new DeltaInsertOp('\n', { list: ListType.Bullet, indent: 1 }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'a')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'b')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'c')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+        indent: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'd')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+        indent: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'e')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'f')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+        indent: 1,
+      }),
     ];
 
     const groups = pairOpsWithTheirBlock(ops);
@@ -86,20 +120,39 @@ describe('nestLists', function () {
 
   it('should nest if lists are same and later ones have higher indent', function () {
     var ops = [
-      new DeltaInsertOp('item 1'),
-      new DeltaInsertOp('\n', { list: ListType.Ordered }),
-      new DeltaInsertOp('item 1a'),
-      new DeltaInsertOp('\n', { list: ListType.Ordered, indent: 1 }),
-      new DeltaInsertOp('item 1a-i'),
-      new DeltaInsertOp('\n', { list: ListType.Ordered, indent: 3 }),
-      new DeltaInsertOp('item 1b'),
-      new DeltaInsertOp('\n', { list: ListType.Ordered, indent: 1 }),
-      new DeltaInsertOp('item 2'),
-      new DeltaInsertOp('\n', { list: ListType.Ordered }),
-      new DeltaInsertOp('haha'),
-      new DeltaInsertOp('\n'),
-      new DeltaInsertOp('\n', { list: ListType.Ordered, indent: 5 }),
-      new DeltaInsertOp('\n', { list: ListType.Bullet, indent: 4 }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'item 1')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'item 1a')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+        indent: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'item 1a-i')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+        indent: 3,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'item 1b')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+        indent: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'item 2')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'haha')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+        indent: 5,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+        indent: 4,
+      }),
     ];
     const pairs = pairOpsWithTheirBlock(ops);
 

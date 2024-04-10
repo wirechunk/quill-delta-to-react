@@ -1,5 +1,5 @@
-import type { DeltaInsertOpType } from './DeltaInsertOp.js';
 import { newLine } from './constants.js';
+import type { DeltaInsertOpType } from './convert-insert-value.js';
 
 /**
  *  Splits by new line character ("\n") by putting new line characters into the
@@ -58,15 +58,15 @@ export const denormalizeInsertOp = (
     return [op];
   }
 
-  const newlinedArray = tokenizeWithNewLines(op.insert);
+  const tokenized = tokenizeWithNewLines(op.insert);
 
-  if (newlinedArray.length === 1) {
+  if (tokenized.length === 1) {
     return [op];
   }
 
   const nlObj: DeltaInsertOpType = { ...op, insert: newLine };
 
-  return newlinedArray.map((line) =>
+  return tokenized.map((line) =>
     line === newLine ? nlObj : { ...op, insert: line },
   );
 };

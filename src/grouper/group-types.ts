@@ -1,16 +1,17 @@
 import { DeltaInsertOp } from './../DeltaInsertOp.js';
+import { InsertDataCustom, InsertDataQuill } from '../InsertData.js';
 
 export class InlineGroup {
   constructor(readonly ops: DeltaInsertOp[]) {}
 }
 
-class SingleItem {
-  constructor(readonly op: DeltaInsertOp) {}
+export class VideoItem {
+  constructor(readonly op: DeltaInsertOp<InsertDataQuill>) {}
 }
 
-export class VideoItem extends SingleItem {}
-
-export class BlotBlock extends SingleItem {}
+export class BlotBlock {
+  constructor(readonly op: DeltaInsertOp<InsertDataCustom>) {}
+}
 
 export class BlockGroup {
   constructor(
@@ -46,6 +47,7 @@ export type TDataGroup =
   | VideoItem
   | InlineGroup
   | BlockGroup
+  | BlotBlock
   | ListItem
   | ListGroup
   | TableGroup

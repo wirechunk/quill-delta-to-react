@@ -16,12 +16,14 @@ import {
 describe('pairOpsWithTheirBlock', function () {
   const ops = [
     new DeltaInsertOp(new InsertDataQuill(DataType.Video, 'http://')),
-    new DeltaInsertOp('hello'),
-    new DeltaInsertOp('\n'),
-    new DeltaInsertOp('how are you?'),
-    new DeltaInsertOp('\n'),
-    new DeltaInsertOp('Time is money'),
-    new DeltaInsertOp('\n', { blockquote: true }),
+    new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello')),
+    new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+    new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'how are you?')),
+    new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+    new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'Time is money')),
+    new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+      blockquote: true,
+    }),
   ];
 
   it('should return ops grouped by group type', function () {
@@ -38,19 +40,45 @@ describe('pairOpsWithTheirBlock', function () {
 describe('groupConsecutiveSameStyleBlocks', function () {
   it('should combine blocks with same type and style into an []', function () {
     const ops = [
-      new DeltaInsertOp('this is code'),
-      new DeltaInsertOp('\n', { 'code-block': true }),
-      new DeltaInsertOp('this is code TOO!'),
-      new DeltaInsertOp('\n', { 'code-block': true }),
-      new DeltaInsertOp('\n', { blockquote: true }),
-      new DeltaInsertOp('\n', { blockquote: true }),
-      new DeltaInsertOp('\n'),
-      new DeltaInsertOp('\n', { header: 1 }),
-      new DeltaInsertOp('\n', { header: 1 }),
-      new DeltaInsertOp('\n', { attr1: true, renderAsBlock: true }),
-      new DeltaInsertOp('\n', { attr1: true, renderAsBlock: true }),
-      new DeltaInsertOp('\n', { attr1: 'test', renderAsBlock: true }),
-      new DeltaInsertOp('\n', { attr2: 'test', renderAsBlock: true }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'this is code')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        'code-block': true,
+      }),
+      new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, 'this is code TOO!'),
+      ),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        'code-block': true,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        blockquote: true,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        blockquote: true,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        header: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        header: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        attr1: true,
+        renderAsBlock: true,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        attr1: true,
+        renderAsBlock: true,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        attr1: 'test',
+        renderAsBlock: true,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        attr2: 'test',
+        renderAsBlock: true,
+      }),
     ];
 
     const pairs = pairOpsWithTheirBlock(ops);
