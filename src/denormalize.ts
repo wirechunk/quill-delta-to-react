@@ -1,4 +1,3 @@
-import { newLine } from './constants.js';
 import type { DeltaInsertOpType } from './convert-insert-value.js';
 
 /**
@@ -6,11 +5,11 @@ import type { DeltaInsertOpType } from './convert-insert-value.js';
  *  array as well. Ex: "hello\n\nworld\n " => ["hello", "\n", "\n", "world", "\n", " "]
  */
 export function tokenizeWithNewLines(str: string): string[] {
-  if (str === newLine) {
+  if (str === '\n') {
     return [str];
   }
 
-  const lines = str.split(newLine);
+  const lines = str.split('\n');
 
   if (lines.length === 1) {
     return lines;
@@ -21,9 +20,9 @@ export function tokenizeWithNewLines(str: string): string[] {
   return lines.reduce<string[]>((pv, line, ind) => {
     if (ind !== lastIndex) {
       if (line !== '') {
-        pv = pv.concat(line, newLine);
+        pv = pv.concat(line, '\n');
       } else {
-        pv.push(newLine);
+        pv.push('\n');
       }
     } else if (line !== '') {
       pv.push(line);
@@ -54,7 +53,7 @@ export function tokenizeWithNewLines(str: string): string[] {
 export const denormalizeInsertOp = (
   op: DeltaInsertOpType,
 ): DeltaInsertOpType[] => {
-  if (typeof op.insert === 'object' || op.insert === newLine) {
+  if (typeof op.insert === 'object' || op.insert === '\n') {
     return [op];
   }
 
@@ -64,9 +63,9 @@ export const denormalizeInsertOp = (
     return [op];
   }
 
-  const nlObj: DeltaInsertOpType = { ...op, insert: newLine };
+  const nlObj: DeltaInsertOpType = { ...op, insert: '\n' };
 
   return tokenized.map((line) =>
-    line === newLine ? nlObj : { ...op, insert: line },
+    line === '\n' ? nlObj : { ...op, insert: line },
   );
 };

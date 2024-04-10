@@ -1,11 +1,11 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
 import { DeltaInsertOp } from './../../src/DeltaInsertOp.js';
-import { InsertDataQuill } from './../../src/InsertData.js';
+import { InsertDataCustom, InsertDataQuill } from './../../src/InsertData.js';
 import {
-  VideoItem,
-  InlineGroup,
   BlockGroup,
+  InlineGroup,
+  VideoItem,
 } from './../../src/grouper/group-types.js';
 import { DataType } from './../../src/value-types.js';
 import {
@@ -13,32 +13,32 @@ import {
   pairOpsWithTheirBlock,
 } from '../../src/grouper/grouping.js';
 
-describe('pairOpsWithTheirBlock', function () {
-  const ops = [
-    new DeltaInsertOp(new InsertDataQuill(DataType.Video, 'http://')),
-    new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello')),
-    new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
-    new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'how are you?')),
-    new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
-    new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'Time is money')),
-    new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-      blockquote: true,
-    }),
-  ];
-
+describe('pairOpsWithTheirBlock', () => {
   it('should return ops grouped by group type', function () {
-    var act = pairOpsWithTheirBlock(ops);
-    var exp = [
-      new VideoItem(ops[0]),
-      new InlineGroup([ops[1], ops[2], ops[3], ops[4]]),
-      new BlockGroup(ops[6], [ops[5]]),
+    const ops = [
+      new DeltaInsertOp(new InsertDataQuill(DataType.Video, 'http://')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hey')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'how are you?')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'Time is money')),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        blockquote: true,
+      }),
     ];
-    assert.deepEqual(act, exp);
+
+    assert.deepEqual(pairOpsWithTheirBlock(ops), [
+      new VideoItem(ops[0]),
+      new InlineGroup([ops[1], ops[2], ops[3]]),
+      new InlineGroup([ops[4], ops[5]]),
+      new BlockGroup(ops[7], [ops[6]]),
+    ]);
   });
 });
 
-describe('groupConsecutiveSameStyleBlocks', function () {
-  it('should combine blocks with same type and style into an []', function () {
+describe('groupConsecutiveSameStyleBlocks', () => {
+  it('should combine blocks with same type and style into an array', function () {
     const ops = [
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'this is code')),
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
@@ -63,10 +63,18 @@ describe('groupConsecutiveSameStyleBlocks', function () {
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         header: 1,
       }),
-      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        attr1: true,
-        renderAsBlock: true,
-      }),
+      new DeltaInsertOp(
+        new InsertDataCustom({
+          attr1: true,
+          renderAsBlock: true,
+        }),
+      ),
+      new DeltaInsertOp(
+        new InsertDataCustom({
+          attr1: true,
+          renderAsBlock: true,
+        }),
+      ),
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         attr1: true,
         renderAsBlock: true,
@@ -83,10 +91,9 @@ describe('groupConsecutiveSameStyleBlocks', function () {
 
     const pairs = pairOpsWithTheirBlock(ops);
     const groups = groupConsecutiveSameStyleBlocks(pairs, {
-      header: true,
-      codeBlocks: true,
-      blockquotes: true,
-      customBlocks: true,
+      multiLineBlockquote: true,
+      multiLineCodeBlock: true,
+      multiLineHeader: true,
     });
 
     assert.deepEqual(groups, [

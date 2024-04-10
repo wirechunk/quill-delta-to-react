@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
 import { InsertDataQuill, InsertDataCustom } from './../src/InsertData.js';
 import { DataType } from './../src/value-types.js';

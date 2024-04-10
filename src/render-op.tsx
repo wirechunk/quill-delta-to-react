@@ -79,7 +79,7 @@ const DEFAULT_INLINE_STYLES: Pick<
   },
 };
 
-const blockTags = [
+const blockAttributes = [
   'blockquote',
   'code-block',
   'list',
@@ -89,7 +89,9 @@ const blockTags = [
   'indent',
 ] as const;
 
-const inlineTags = [
+export type BlockAttribute = (typeof blockAttributes)[number];
+
+const inlineAttributes = [
   'link',
   'mentions',
   'script',
@@ -99,6 +101,8 @@ const inlineTags = [
   'underline',
   'code',
 ] as const;
+
+export type InlineAttribute = (typeof inlineAttributes)[number];
 
 export type DataAttributes = {
   [key: `data-${string}`]: unknown;
@@ -116,7 +120,7 @@ export type OpToNodeConverterOptions = {
   linkTarget?: string;
   allowBackgroundClasses?: boolean;
   customTag?: (
-    format: string,
+    format: BlockAttribute | InlineAttribute,
     op: DeltaInsertOp,
   ) => keyof JSX.IntrinsicElements | undefined;
   customAttributes?: (op: DeltaInsertOp) => HTMLAttributes | undefined;
@@ -146,9 +150,17 @@ export class RenderOp<Insert extends InsertData> {
     return className;
   }
 
-  renderOp(children: ReactNode): ReactNode {
+  renderOp(children?: ReactNode): ReactNode {
     const tags = this.getTags();
     const attributes = this.getTagAttributes();
+
+    if (this.op.isJustNewline() && !Object.keys(attributes).length) {
+      return null;
+    }
+
+    if (this.options.customAttributes) {
+      Object.assign(attributes, this.options.customAttributes(this.op));
+    }
 
     if (
       Array.isArray(tags) &&
@@ -298,9 +310,7 @@ export class RenderOp<Insert extends InsertData> {
   }
 
   getTagAttributes(): HTMLAttributes {
-    const tagAttrs: HTMLAttributes = {
-      ...this.options.customAttributes?.(this.op),
-    };
+    const tagAttrs: HTMLAttributes = {};
 
     const style = this.getCssStyles();
     if (Object.keys(style).length) {
@@ -436,7 +446,7 @@ export class RenderOp<Insert extends InsertData> {
     const { attributes } = this.op;
 
     // blocks
-    for (const format of blockTags) {
+    for (const format of blockAttributes) {
       const value = attributes[format];
       if (value) {
         const customTag = this.options.customTag?.(format, this.op);
@@ -475,18 +485,10 @@ export class RenderOp<Insert extends InsertData> {
       }
     }
 
-    if (this.op.isCustomTextBlock()) {
-      return (
-        this.options.customTag?.('renderAsBlock', this.op) ||
-        this.options.paragraphTag ||
-        'p'
-      );
-    }
-
     // inlines
     const tags: Array<keyof JSX.IntrinsicElements> = [];
 
-    for (const format of inlineTags) {
+    for (const format of inlineAttributes) {
       const value = attributes[format];
       if (value) {
         const customTag = this.options.customTag?.(format, this.op);

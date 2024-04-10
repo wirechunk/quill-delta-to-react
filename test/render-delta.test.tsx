@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { DeltaInsertOp } from './../src/DeltaInsertOp.js';
 import { CustomRenderer, RenderDelta } from './../src/render-delta.js';
 import { DataType, ListType, ScriptType } from './../src/value-types.js';
@@ -39,6 +39,27 @@ describe('RenderDelta', () => {
   });
 
   describe('render', () => {
+    it('should render a plain new line string as an empty paragraph', () => {
+      const rd = new RenderDelta({
+        ops: [{ insert: '\n' }],
+      });
+      assert.equal(renderToStaticMarkup(rd.render()), '<p></p>');
+    });
+
+    it('should render when the first op is just a new line', () => {
+      const rd = new RenderDelta({
+        ops: [{ insert: '\n' }, { insert: 'aa\n' }],
+      });
+      assert.equal(renderToStaticMarkup(rd.render()), '<p></p><p>aa</p>');
+    });
+
+    it('should render when last line is new line', () => {
+      const rd = new RenderDelta({
+        ops: [{ insert: 'aa' }, { insert: '\n' }],
+      });
+      assert.equal(renderToStaticMarkup(rd.render()), '<p>aa</p>');
+    });
+
     it('should render HTML', function () {
       const ops = [
         { insert: 'this is text\nthis is code' },
@@ -257,6 +278,7 @@ describe('RenderDelta', () => {
           insert: { image: 'http://yahoo.com/def.jpg' },
           attributes: { link: 'http://aha' },
         },
+        { insert: '\n' },
       ];
       const rd = new RenderDelta({ ops });
       assert.equal(
@@ -277,20 +299,17 @@ describe('RenderDelta', () => {
       const rd = new RenderDelta({ ops });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p>mr</p><ol><li>hello</li></ol><ul><li>there</li></ul><ol><li>\n</li></ol>',
+        '<p>mr</p><ol><li>hello</li></ol><ul><li>there</li></ul><ol><li></li></ol>',
       );
     });
 
-    it('should render as separate paragraphs when multiLineParagraph is false', () => {
+    it('should render separate paragraphs', () => {
       const rd = new RenderDelta({
-        ops: [{ insert: 'hello\nhow are you?\n\nbye' }],
-        options: {
-          multiLineParagraph: false,
-        },
+        ops: [{ insert: 'hello\nhow are you?\n\nbye\n' }],
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p>hello</p><p>how are you?</p><p><br/></p><p>bye</p>',
+        '<p>hello</p><p>how are you?</p><p></p><p>bye</p>',
       );
     });
 
@@ -321,206 +340,147 @@ describe('RenderDelta', () => {
       );
     });
 
-    describe('custom text block', () => {
+    it('should render text while escaping HTML', () => {
       const ops = [
-        {
-          insert: 'line 1',
-        },
-        {
-          attributes: {
-            renderAsBlock: true,
-            attr1: true,
-          },
-          insert: '\n',
-        },
-        {
-          insert: 'line 2',
-        },
-        {
-          attributes: {
-            renderAsBlock: true,
-            attr1: true,
-          },
-          insert: '\n',
-        },
-        {
-          insert: 'line 3',
-        },
-        {
-          attributes: {
-            renderAsBlock: true,
-            attr2: true,
-          },
-          insert: '\n',
-        },
-        {
-          insert: '<p>line 4</p>',
-        },
-        {
-          attributes: {
-            renderAsBlock: true,
-            attr1: true,
-          },
-          insert: '\n',
-        },
-        {
-          insert: 'line 5',
-        },
-        {
-          attributes: {
-            renderAsBlock: true,
-            attr1: 'test',
-          },
-          insert: '\n',
-        },
+        { insert: 'line 1\n', attributes: { code: true } },
+        { insert: 'line 2' },
+        { insert: 'yo\n', attributes: { attr1: true } },
+        { insert: 'line 3\n' },
+        { insert: '<p>line 4</p>' },
+        { insert: '\n', attributes: { attr1: true } },
+        { insert: 'line 5' },
+        { insert: '\n', attributes: { attr1: 'test' } },
       ];
 
-      it('should render custom text block', () => {
+      const rd = new RenderDelta({
+        ops,
+        options: {
+          customTag: (format) => {
+            return format === 'code' ? 'small' : undefined;
+          },
+          customAttributes: (op) => {
+            if (op.attributes['attr1']) {
+              return {
+                'data-attr1': op.attributes['attr1'],
+              };
+            }
+            return undefined;
+          },
+          customClasses: (op) => {
+            if (op.attributes['attr1'] === 'test') {
+              return ['ql-test'];
+            }
+            return undefined;
+          },
+          customCssStyles: (op) => {
+            if (op.attributes['attr1'] === 'test') {
+              return { color: 'red' };
+            }
+            return undefined;
+          },
+        },
+      });
+
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        `<p><small>line 1</small></p><p>line 2<span data-attr1="true">yo</span></p><p>line 3</p><p>${encodeHtml(
+          '<p>line 4</p>',
+        )}</p><p>line 5<span style="color:red" class="ql-test" data-attr1="test"></span></p>`,
+      );
+    });
+
+    describe('overriding paragraphTag', () => {
+      const ops = [
+        { insert: 'hey' },
+        { insert: '\n', attributes: { align: 'center' } },
+        { insert: '\n', attributes: { direction: 'rtl' } },
+        { insert: '\n', attributes: { indent: 2 } },
+      ];
+
+      it('should render with div tag', () => {
         const rd = new RenderDelta({
           ops,
-          options: {
-            customTag: (format, op) => {
-              if (
-                format === 'renderAsBlock' &&
-                op.attributes['attr1'] === 'test'
-              ) {
-                return 'section';
-              }
-            },
-            customAttributes: (op) => {
-              if (op.attributes['attr1'] === 'test') {
-                return {
-                  attr1: op.attributes['attr1'],
-                };
-              }
-            },
-            customClasses: (op) => {
-              if (op.attributes['attr1'] === 'test') {
-                return ['ql-test'];
-              }
-            },
-            customCssStyles: (op) => {
-              if (op.attributes['attr1'] === 'test') {
-                return { color: 'red' };
-              }
-            },
-          },
+          options: { paragraphTag: 'div' },
         });
+        const html = renderToStaticMarkup(rd.render());
+        assert.equal(html.includes('hey'), true);
+        assert.equal(html.includes('<div class="ql-align'), true);
+        assert.equal(html.includes('<div class="ql-direction'), true);
+        assert.equal(html.includes('<div class="ql-indent-2'), true);
+      });
 
+      it('should render with the default p tag', () => {
+        const rd = new RenderDelta({ ops });
+        const html = renderToStaticMarkup(rd.render());
+        assert.equal(html.includes('hey'), true);
+        assert.equal(html.includes('<p class="ql-align'), true);
+        assert.equal(html.includes('<p class="ql-direction'), true);
+        assert.equal(html.includes('<p class="ql-indent-2'), true);
+      });
+    });
+
+    describe('target attribute', () => {
+      const ops = [
+        { attributes: { target: '_self', link: 'http://#' }, insert: 'A' },
+        { attributes: { target: '_blank', link: 'http://#' }, insert: 'B' },
+        { attributes: { link: 'http://#' }, insert: 'C' },
+        { insert: '\n' },
+      ];
+
+      it('should render the target attribute when linkTarget is unspecified', () => {
+        const rd = new RenderDelta({ ops });
         assert.equal(
           renderToStaticMarkup(rd.render()),
-          `<p>line 1</p><br/>line 2</p><p>line 3</p><p>${encodeHtml(
-            '<p>line 4</p>',
-          )}</p><section attr1="test" class="ql-test" style="color:red">line 5</section>`,
+          '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#" target="_blank">C</a></p>',
         );
       });
 
-      it('should render custom text block with the multiLineCustomBlock option set to false', () => {
-        const rd = new RenderDelta({
-          ops,
-          options: {
-            multiLineCustomBlock: false,
-          },
-        });
+      it('should render the target attribute when linkTarget is an empty string', () => {
+        const rd = new RenderDelta({ ops, options: { linkTarget: '' } });
+        let html = renderToStaticMarkup(rd.render());
         assert.equal(
-          renderToStaticMarkup(rd.render()),
-          `<p>line 1</p><p>line 2</p><p>line 3</p><p>${encodeHtml(
-            '<p>line 4</p>',
-          )}</p><p>line 5</p>`,
+          html,
+          '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#">C</a></p>',
         );
       });
 
-      describe('overriding paragraphTag', () => {
-        const ops = [
-          { insert: 'hey' },
-          { insert: '\n', attributes: { align: 'center' } },
-          { insert: '\n', attributes: { direction: 'rtl' } },
-          { insert: '\n', attributes: { indent: 2 } },
-        ];
-
-        it('should render with div tag', () => {
-          const rd = new RenderDelta({
-            ops,
-            options: { paragraphTag: 'div' },
-          });
-          const html = renderToStaticMarkup(rd.render());
-          assert.equal(html.includes('hey'), true);
-          assert.equal(html.includes('<div class="ql-align'), true);
-          assert.equal(html.includes('<div class="ql-direction'), true);
-          assert.equal(html.includes('<div class="ql-indent-2'), true);
-        });
-
-        it('should render with the default p tag', () => {
-          const rd = new RenderDelta({ ops });
-          const html = renderToStaticMarkup(rd.render());
-          assert.equal(html.includes('hey'), true);
-          assert.equal(html.includes('<p class="ql-align'), true);
-          assert.equal(html.includes('<p class="ql-direction'), true);
-          assert.equal(html.includes('<p class="ql-indent-2'), true);
-        });
-      });
-
-      describe('target attribute', () => {
-        const ops = [
-          { attributes: { target: '_self', link: 'http://#' }, insert: 'A' },
-          { attributes: { target: '_blank', link: 'http://#' }, insert: 'B' },
-          { attributes: { link: 'http://#' }, insert: 'C' },
-          { insert: '\n' },
-        ];
-
-        it('should render the target attribute when linkTarget is unspecified', () => {
-          const rd = new RenderDelta({ ops });
-          assert.equal(
-            renderToStaticMarkup(rd.render()),
-            '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#" target="_blank">C</a></p>',
-          );
-        });
-
-        it('should render the target attribute when linkTarget is an empty string', () => {
-          const rd = new RenderDelta({ ops, options: { linkTarget: '' } });
-          let html = renderToStaticMarkup(rd.render());
-          assert.equal(
-            html,
-            '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#">C</a></p>',
-          );
-        });
-
-        it('should render the target attribute when linkTarget is _top', () => {
-          const rd = new RenderDelta({ ops, options: { linkTarget: '_top' } });
-          assert.equal(
-            renderToStaticMarkup(rd.render()),
-            [
-              `<p><a href="http://#" target="_self">A</a>`,
-              `<a href="http://#" target="_blank">B</a>`,
-              `<a href="http://#" target="_top">C</a></p>`,
-            ].join(''),
-          );
-        });
-      });
-
-      it('should convert using custom url sanitizer', () => {
-        const ops = [
-          { attributes: { link: 'http://yahoo<%=abc%>/ed' }, insert: 'test' },
-          { attributes: { link: 'http://abc<' }, insert: 'hi' },
-        ];
-
-        const rd = new RenderDelta({
-          ops,
-          options: {
-            urlSanitizer: (url) => {
-              if (url.includes('<%')) {
-                return 'REDACTED';
-              }
-              return url;
-            },
-          },
-        });
+      it('should render the target attribute when linkTarget is _top', () => {
+        const rd = new RenderDelta({ ops, options: { linkTarget: '_top' } });
         assert.equal(
           renderToStaticMarkup(rd.render()),
-          '<p><a href="REDACTED" target="_blank">test</a><a href="http://abc&lt;" target="_blank">hi</a></p>',
+          [
+            `<p><a href="http://#" target="_self">A</a>`,
+            `<a href="http://#" target="_blank">B</a>`,
+            `<a href="http://#" target="_top">C</a></p>`,
+          ].join(''),
         );
       });
+    });
 
+    it('should convert using custom url sanitizer', () => {
+      const ops = [
+        { attributes: { link: 'http://yahoo<%=abc%>/ed' }, insert: 'test' },
+        { attributes: { link: 'http://abc<' }, insert: 'hi' },
+      ];
+
+      const rd = new RenderDelta({
+        ops,
+        options: {
+          urlSanitizer: (url) => {
+            if (url.includes('<%')) {
+              return 'REDACTED';
+            }
+            return url;
+          },
+        },
+      });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p><a href="REDACTED" target="_blank">test</a><a href="http://abc&lt;" target="_blank">hi</a></p>',
+      );
+    });
+
+    describe('tables', () => {
       it('should render an empty table', () => {
         const ops = [
           {
@@ -551,11 +511,11 @@ describe('RenderDelta', () => {
           renderToStaticMarkup(rd.render()),
           [
             `<table><tbody>`,
-            `<tr><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td><td data-row="row-1"><br/></td></tr>`,
-            `<tr><td data-row="row-2"><br/></td><td data-row="row-2"><br/></td><td data-row="row-2"><br/></td></tr>`,
-            `<tr><td data-row="row-3"><br/></td><td data-row="row-3"><br/></td><td data-row="row-3"><br/></td></tr>`,
+            `<tr><td data-row="row-1"></td><td data-row="row-1"></td><td data-row="row-1"></td></tr>`,
+            `<tr><td data-row="row-2"></td><td data-row="row-2"></td><td data-row="row-2"></td></tr>`,
+            `<tr><td data-row="row-3"></td><td data-row="row-3"></td><td data-row="row-3"></td></tr>`,
             `</tbody></table>`,
-            `<p><br/></p>`,
+            `<p></p>`,
           ].join(''),
         );
       });
@@ -685,190 +645,83 @@ describe('RenderDelta', () => {
           ].join(''),
         );
       });
+    });
 
-      describe('getGroupedOps', () => {
-        it('should transform raw Delta ops to an array of DeltaInsertOp', function () {
-          const ops = [
-            { insert: 'This ' },
-            { attributes: { font: 'monospace' }, insert: 'is' },
-            { insert: ' a ' },
-            { attributes: { size: 'large' }, insert: 'test' },
-            { insert: ' ' },
-            { attributes: { italic: true, bold: true }, insert: 'data' },
-            { insert: ' ' },
-            { attributes: { underline: true, strike: true }, insert: 'that' },
-            { insert: ' is ' },
-            { attributes: { color: '#e60000' }, insert: 'will' },
-            { insert: ' ' },
-            { attributes: { background: '#ffebcc' }, insert: 'test' },
-            { insert: ' ' },
-            { attributes: { script: ScriptType.Sub }, insert: 'the' },
-            { insert: ' ' },
-            { attributes: { script: ScriptType.Super }, insert: 'rendering' },
-            { insert: ' of ' },
-            { attributes: { link: 'yahoo' }, insert: 'inline' },
-            { insert: ' ' },
-            { insert: { formula: 'x=data' } },
-            { insert: '  formats.\n' },
-          ];
+    describe('blocks', () => {
+      const ops = [
+        {
+          insert: 'line 1',
+        },
+        {
+          attributes: {
+            'code-block': true,
+          },
+          insert: '\n',
+        },
+        {
+          insert: 'line 2',
+        },
+        {
+          attributes: {
+            'code-block': true,
+          },
+          insert: '\n',
+        },
+        {
+          insert: 'line 3',
+        },
+        {
+          attributes: {
+            'code-block': 'javascript',
+          },
+          insert: '\n',
+        },
+        {
+          insert: '<p>line 4</p>',
+        },
+        {
+          attributes: {
+            'code-block': true,
+          },
+          insert: '\n',
+        },
+        {
+          insert: 'line 5',
+        },
+        {
+          attributes: {
+            // This value should be sanitized out.
+            'code-block': 'ja"va',
+          },
+          insert: '\n',
+        },
+      ];
 
-          const rd = new RenderDelta({
-            ops,
-            options: {
-              urlSanitizer: (url) =>
-                url.includes('yahoo') ? `unsafe:${url}` : url,
-            },
-          });
-
-          const groupedOps = rd.getGroupedOps();
-          assert.deepEqual(groupedOps, [
-            new InlineGroup([
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'This ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'is'), {
-                font: 'monospace',
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' a ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'test'), {
-                size: 'large',
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'data'), {
-                italic: true,
-                bold: true,
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'that'), {
-                underline: true,
-                strike: true,
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' is ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'will'), {
-                color: '#e60000',
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'test'), {
-                background: '#ffebcc',
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'the'), {
-                script: ScriptType.Sub,
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
-              new DeltaInsertOp(
-                new InsertDataQuill(DataType.Text, 'rendering'),
-                { script: ScriptType.Super },
-              ),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' of ')),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'inline'), {
-                link: 'unsafe:yahoo',
-              }),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
-              new DeltaInsertOp(
-                new InsertDataQuill(DataType.Formula, 'x=data'),
-              ),
-              new DeltaInsertOp(
-                new InsertDataQuill(DataType.Text, '  formats.'),
-              ),
-              new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
-            ]),
-          ]);
-        });
-
-        it('should transform raw custom ops', () => {
-          const rd = new RenderDelta({
-            ops: [{ insert: { cake: 'chocolate' } }],
-          });
-          assert.deepEqual(rd.getGroupedOps(), [
-            new InlineGroup([
-              new DeltaInsertOp(new InsertDataCustom({ cake: 'chocolate' })),
-            ]),
-          ]);
-        });
-
-        it('should exclude invalid ops', () => {
-          [null, undefined, 3, {}].forEach((op: unknown) => {
-            const rd = new RenderDelta({ ops: [op] });
-            assert.deepEqual(rd.getGroupedOps(), []);
-          });
-        });
+      it('should correctly render code block', () => {
+        const rd = new RenderDelta({ ops });
+        let html = renderToStaticMarkup(rd.render());
+        assert.equal(
+          html,
+          `<pre>line 1\nline 2</pre><pre data-language="javascript">line 3</pre><pre>${encodeHtml(
+            '<p>line 4</p>',
+          )}\nline 5</pre>`,
+        );
       });
 
-      describe('blocks', () => {
-        const ops = [
-          {
-            insert: 'line 1',
+      it('should render code block with the multiLineCodeBlock option set to false', () => {
+        const rd = new RenderDelta({
+          ops,
+          options: {
+            multiLineCodeBlock: false,
           },
-          {
-            attributes: {
-              'code-block': true,
-            },
-            insert: '\n',
-          },
-          {
-            insert: 'line 2',
-          },
-          {
-            attributes: {
-              'code-block': true,
-            },
-            insert: '\n',
-          },
-          {
-            insert: 'line 3',
-          },
-          {
-            attributes: {
-              'code-block': 'javascript',
-            },
-            insert: '\n',
-          },
-          {
-            insert: '<p>line 4</p>',
-          },
-          {
-            attributes: {
-              'code-block': true,
-            },
-            insert: '\n',
-          },
-          {
-            insert: 'line 5',
-          },
-          {
-            attributes: {
-              // This value should be sanitized out.
-              'code-block': 'ja"va',
-            },
-            insert: '\n',
-          },
-        ];
-
-        it('should correctly render code block', () => {
-          const rd = new RenderDelta({ ops });
-          let html = renderToStaticMarkup(rd.render());
-          assert.equal(
-            html,
-            `<pre>line 1\nline 2</pre><pre data-language="javascript">line 3</pre><pre>${encodeHtml(
-              '<p>line 4</p>',
-            )}\nline 5</pre>`,
-          );
         });
-
-        it('should render code block with the multiLineCodeBlock option set to false', () => {
-          const rd = new RenderDelta({
-            ops,
-            options: {
-              multiLineCodeBlock: false,
-            },
-          });
-          const html = renderToStaticMarkup(rd.render());
-          assert.equal(
-            html,
-            `<pre>line 1</pre><pre>line 2</pre><pre data-language="javascript">line 3</pre><pre>${encodeHtml(
-              '<p>line 4</p>',
-            )}</pre><pre>line 5</pre>`,
-          );
-        });
+        const html = renderToStaticMarkup(rd.render());
+        assert.equal(
+          html,
+          `<pre>line 1</pre><pre>line 2</pre><pre data-language="javascript">line 3</pre><pre>${encodeHtml(
+            '<p>line 4</p>',
+          )}</pre><pre>line 5</pre>`,
+        );
       });
     });
 
@@ -897,33 +750,86 @@ describe('RenderDelta', () => {
         );
       });
 
-      it('should render custom insert types as blocks if renderAsBlock is specified', () => {
-        const ops = [
-          { insert: 'hello ' },
-          { insert: { myBlot: 'my friend' } },
-          { insert: '!' },
-          {
-            insert: { myBlot: 'how r u?' },
-            attributes: { renderAsBlock: true },
-          },
-        ];
-        const rd = new RenderDelta({
-          ops,
-          customRenderer: ({ insert, attributes }) => {
-            if ('myBlot' in insert && typeof insert.myBlot === 'string') {
-              return attributes.renderAsBlock ? (
-                <div>{insert.myBlot}</div>
-              ) : (
-                insert.myBlot
-              );
-            }
-            return 'unknown';
-          },
+      describe('the renderAsBlock attribute', () => {
+        it('should render as a top-level element when renderAsBlock is true', () => {
+          const ops = [
+            { insert: 'hello ' },
+            // Notice here there's no renderAsBlock.
+            { insert: { myAbbr: 'my friend', title: 'T1' } },
+            { insert: '!' },
+            // And here it's true.
+            {
+              insert: { myAbbr: 'how r u?', title: 'T2' },
+              attributes: { renderAsBlock: true },
+            },
+          ];
+          const rd = new RenderDelta({
+            ops,
+            customRenderer: ({ insert }) => {
+              if (
+                'myAbbr' in insert.value &&
+                typeof insert.value.myAbbr === 'string'
+              ) {
+                return (
+                  <abbr
+                    title={
+                      typeof insert.value.title === 'string'
+                        ? insert.value.title
+                        : undefined
+                    }
+                  >
+                    {insert.value.myAbbr}
+                  </abbr>
+                );
+              }
+              return 'unknown';
+            },
+          });
+          assert.equal(
+            renderToStaticMarkup(rd.render()),
+            '<p>hello <abbr title="T1">my friend</abbr>!</p><abbr title="T2">how r u?</abbr>',
+          );
         });
-        assert.equal(
-          renderToStaticMarkup(rd.render()),
-          '<p>hello my friend!</p><div>how r u?</div>',
-        );
+
+        it('should render wrapped in a p tag when renderAsBlock is false', () => {
+          const ops = [
+            { insert: 'hello ' },
+            // Notice here there's no renderAsBlock.
+            { insert: { myAbbr: 'my friend', title: 'T1' } },
+            { insert: '!' },
+            // And here it's false.
+            {
+              insert: { myAbbr: 'how r u?', title: 'T2' },
+              attributes: { renderAsBlock: false },
+            },
+          ];
+          const rd = new RenderDelta({
+            ops,
+            customRenderer: ({ insert }) => {
+              if (
+                'myAbbr' in insert.value &&
+                typeof insert.value.myAbbr === 'string'
+              ) {
+                return (
+                  <abbr
+                    title={
+                      typeof insert.value.title === 'string'
+                        ? insert.value.title
+                        : undefined
+                    }
+                  >
+                    {insert.value.myAbbr}
+                  </abbr>
+                );
+              }
+              return 'unknown';
+            },
+          });
+          assert.equal(
+            renderToStaticMarkup(rd.render()),
+            '<p>hello <abbr title="T1">my friend</abbr>!<abbr title="T2">how r u?</abbr></p>',
+          );
+        });
       });
 
       describe('inside code blocks', () => {
@@ -956,7 +862,7 @@ describe('RenderDelta', () => {
           );
         });
 
-        it('should render custom insert types with a custom tag', () => {
+        it('should render custom insert types along with inserts with a custom tag', () => {
           const rd = new RenderDelta({
             ops,
             options: {
@@ -1007,44 +913,12 @@ describe('RenderDelta', () => {
       });
     });
 
-    describe('getListTag', function () {
-      const rd = new RenderDelta({ ops: [] });
-
-      it('should return the expected list tag for an ordered list', () => {
-        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-          list: ListType.Ordered,
-        });
-        assert.equal(rd.getListTag(op), 'ol');
-      });
-
-      it('should return the expected list tag for a bullet list', () => {
-        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-          list: ListType.Bullet,
-        });
-        assert.equal(rd.getListTag(op), 'ul');
-      });
-
-      it('should return the expected list tag for a checked list', () => {
-        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-          list: ListType.Checked,
-        });
-        assert.equal(rd.getListTag(op), 'ul');
-      });
-
-      it('should return the expected list tag for an unchecked list', () => {
-        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-          list: ListType.Unchecked,
-        });
-        assert.equal(rd.getListTag(op), 'ul');
-      });
-    });
-
-    it('should render inlines custom tag', function () {
+    it('should render inlines with a custom tag', function () {
       const rd = new RenderDelta({
         ops: [
           { insert: 'Hello' },
           { insert: ' my ', attributes: { italic: true } },
-          { insert: '\n', attributes: { italic: true } },
+          { insert: '\n' },
           { insert: ' name is joey' },
         ],
         options: {
@@ -1057,42 +931,13 @@ describe('RenderDelta', () => {
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p>Hello<i> my </i><br/> name is joey</p>',
+        '<p>Hello<i> my </i></p><p> name is joey</p>',
       );
     });
 
-    it('should render plain new line string', () => {
+    it('should render a paragraph for each new line', () => {
       const rd = new RenderDelta({
-        ops: [new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'))],
-      });
-      assert.equal(renderToStaticMarkup(rd.render()), '<p><br/></p>');
-    });
-
-    it('should render when first line is new line', () => {
-      const rd = new RenderDelta({
-        ops: [
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa')),
-        ],
-      });
-      assert.equal(renderToStaticMarkup(rd.render()), '<p><br/>aa</p>');
-    });
-
-    it('should render when last line is new line', () => {
-      const rd = new RenderDelta({
-        ops: [
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa')),
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
-        ],
-      });
-      assert.equal(renderToStaticMarkup(rd.render()), '<p>aa</p>');
-    });
-
-    it('should render mixed lines', () => {
-      const rd = new RenderDelta({
-        ops: [
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\na\nb\n')),
-        ],
+        ops: [{ insert: '\na\nb\n' }],
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
@@ -1100,26 +945,150 @@ describe('RenderDelta', () => {
       );
     });
 
-    it('should render mixed lines with styled newlines', () => {
-      const styledNewlineOp = new DeltaInsertOp(
-        new InsertDataQuill(DataType.Text, '\n'),
-        {
-          color: '#333',
-          italic: true,
-        },
-      );
-      const ops4 = [
-        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'a')),
-        styledNewlineOp,
-        styledNewlineOp,
-        styledNewlineOp,
-        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'b')),
+    it('should render lines with mixed styles', () => {
+      const ops = [
+        { insert: 'a', attributes: { color: 'red', italic: true } },
+        { insert: '\n\nb\n' },
       ];
-      const rd = new RenderDelta({ ops: ops4 });
+      const rd = new RenderDelta({ ops });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p>a<br/><br/><br/>b</p>',
+        '<p><em style="color:red">a</em></p><p></p><p>b</p>',
       );
+    });
+  });
+
+  describe('getGroupedOps', () => {
+    it('should transform raw Delta ops to an array of DeltaInsertOp', function () {
+      const ops = [
+        { insert: 'This ' },
+        { attributes: { font: 'monospace' }, insert: 'is' },
+        { insert: ' a ' },
+        { attributes: { size: 'large' }, insert: 'test' },
+        { insert: ' ' },
+        { attributes: { italic: true, bold: true }, insert: 'data' },
+        { insert: ' ' },
+        { attributes: { underline: true, strike: true }, insert: 'that' },
+        { insert: ' is ' },
+        { attributes: { color: '#e60000' }, insert: 'will' },
+        { insert: ' ' },
+        { attributes: { background: '#ffebcc' }, insert: 'test' },
+        { insert: ' ' },
+        { attributes: { script: ScriptType.Sub }, insert: 'the' },
+        { insert: ' ' },
+        { attributes: { script: ScriptType.Super }, insert: 'rendering' },
+        { insert: ' of ' },
+        { attributes: { link: 'yahoo' }, insert: 'inline' },
+        { insert: ' ' },
+        { insert: { formula: 'x=data' } },
+        { insert: '  formats.\n' },
+      ];
+
+      const rd = new RenderDelta({
+        ops,
+        options: {
+          urlSanitizer: (url) =>
+            url.includes('yahoo') ? `unsafe:${url}` : url,
+        },
+      });
+
+      const groupedOps = rd.getGroupedOps();
+      assert.deepEqual(groupedOps, [
+        new InlineGroup([
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'This ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'is'), {
+            font: 'monospace',
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' a ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'test'), {
+            size: 'large',
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'data'), {
+            italic: true,
+            bold: true,
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'that'), {
+            underline: true,
+            strike: true,
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' is ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'will'), {
+            color: '#e60000',
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'test'), {
+            background: '#ffebcc',
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'the'), {
+            script: ScriptType.Sub,
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'rendering'), {
+            script: ScriptType.Super,
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' of ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'inline'), {
+            link: 'unsafe:yahoo',
+          }),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, ' ')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Formula, 'x=data')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '  formats.')),
+          new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n')),
+        ]),
+      ]);
+    });
+
+    it('should transform raw custom ops', () => {
+      const rd = new RenderDelta({
+        ops: [{ insert: { cake: 'chocolate' } }],
+      });
+      assert.deepEqual(rd.getGroupedOps(), [
+        new InlineGroup([
+          new DeltaInsertOp(new InsertDataCustom({ cake: 'chocolate' })),
+        ]),
+      ]);
+    });
+
+    it('should exclude invalid ops', () => {
+      [null, undefined, 3, {}].forEach((op: unknown) => {
+        const rd = new RenderDelta({ ops: [op] });
+        assert.deepEqual(rd.getGroupedOps(), []);
+      });
+    });
+  });
+
+  describe('getListTag', () => {
+    const rd = new RenderDelta({ ops: [] });
+
+    it('should return the expected list tag for an ordered list', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Ordered,
+      });
+      assert.equal(rd.getListTag(op), 'ol');
+    });
+
+    it('should return the expected list tag for a bullet list', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Bullet,
+      });
+      assert.equal(rd.getListTag(op), 'ul');
+    });
+
+    it('should return the expected list tag for a checked list', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Checked,
+      });
+      assert.equal(rd.getListTag(op), 'ul');
+    });
+
+    it('should return the expected list tag for an unchecked list', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        list: ListType.Unchecked,
+      });
+      assert.equal(rd.getListTag(op), 'ul');
     });
   });
 });

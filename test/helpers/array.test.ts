@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
 import { groupConsecutiveElementsWhile } from '../../src/helpers/array.js';
 

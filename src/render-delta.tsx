@@ -21,15 +21,14 @@ import {
 } from './grouper/group-types.js';
 import { nestLists } from './grouper/nest-lists.js';
 import {
-  OpAttributeSanitizerOptions,
   OpAttributeSanitizer,
+  OpAttributeSanitizerOptions,
 } from './OpAttributeSanitizer.js';
 import { groupTables } from './grouper/group-tables.js';
 import { denormalizeInsertOp } from './denormalize.js';
 import { convertInsertValue, isDeltaInsertOp } from './convert-insert-value.js';
 import { Component, Fragment, JSX, ReactNode } from 'react';
-import { br, newLine } from './constants.js';
-import { InsertDataCustom } from './InsertData.js';
+import { InsertDataCustom, InsertDataQuill } from './InsertData.js';
 
 export type RenderDeltaOptions = OpAttributeSanitizerOptions &
   OpToNodeConverterOptions & {
@@ -38,8 +37,6 @@ export type RenderDeltaOptions = OpAttributeSanitizerOptions &
     multiLineBlockquote: boolean;
     multiLineHeader: boolean;
     multiLineCodeBlock: boolean;
-    multiLineParagraph: boolean;
-    multiLineCustomBlock: boolean;
   };
 
 export type CustomRenderer = (
@@ -68,8 +65,6 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       multiLineBlockquote: true,
       multiLineHeader: true,
       multiLineCodeBlock: true,
-      multiLineParagraph: true,
-      multiLineCustomBlock: true,
       classPrefix: 'ql',
       inlineStyles: false,
       listItemTag: 'li',
@@ -127,7 +122,15 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       if (group instanceof VideoItem) {
         return this.renderVideo(group.op);
       }
-      return this.renderInlines((group as InlineGroup).ops, true);
+      const Tag = this.state.options.paragraphTag || 'p';
+      const inlines = this.renderInlines((group as InlineGroup).ops);
+      return (
+        <Tag>
+          {inlines.map((node, i) => (
+            <Fragment key={i}>{node}</Fragment>
+          ))}
+        </Tag>
+      );
     });
   }
 
@@ -167,12 +170,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
 
     const groupedSameStyleBlocks = groupConsecutiveSameStyleBlocks(
       pairOpsWithTheirBlock(deltaOps),
-      {
-        blockquotes: this.state.options.multiLineBlockquote,
-        header: this.state.options.multiLineHeader,
-        codeBlocks: this.state.options.multiLineCodeBlock,
-        customBlocks: this.state.options.multiLineCustomBlock,
-      },
+      this.state.options,
     );
 
     // Move all ops of same style consecutive blocks to the ops of first block and discard the rest.
@@ -210,7 +208,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     const converter = new RenderOp(li.item.op, this.state.converterOptions);
     return converter.renderOp(
       <>
-        {this.renderInlines(li.item.ops, false)}
+        {this.renderInlines(li.item.ops)}
         {li.innerList && this.renderList(li.innerList)}
       </>,
     );
@@ -232,7 +230,7 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
 
   private renderTableCell(cell: TableCell): ReactNode {
     const converter = new RenderOp(cell.item.op, this.state.converterOptions);
-    const cellElements = this.renderInlines(cell.item.ops, false);
+    const cellElements = this.renderInlines(cell.item.ops);
     return (
       <td data-row={cell.item.op.attributes.table}>
         {converter.renderOp(cellElements)}
@@ -253,45 +251,17 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       );
     }
 
-    const inlines = ops.map((op) => this.renderInline(op, blockOp));
-    return converter.renderOp(inlines.length ? inlines : br);
+    return converter.renderOp(ops.map((op) => this.renderInline(op, blockOp)));
   }
 
-  private renderInlines(
-    ops: DeltaInsertOp[],
-    isInlineGroup: boolean,
-  ): ReactNode {
-    const lastIndex = ops.length - 1;
-    const html = ops.map((op, i) => {
-      if (i > 0 && i === lastIndex && op.isJustNewline()) {
-        return '';
-      }
+  private renderInlines(ops: DeltaInsertOp[]): ReactNode[] {
+    // const lastIndex = ops.length - 1;
+    return ops.map((op, i) => {
+      // if (i > 0 && i === lastIndex && op.isJustNewline()) {
+      //   return null;
+      // }
       return this.renderInline(op, null);
     });
-    if (!isInlineGroup) {
-      return html;
-    }
-
-    const Tag = this.state.options.paragraphTag || 'p';
-
-    if (
-      (html.length === 1 && html[0] === br) ||
-      this.state.options.multiLineParagraph
-    ) {
-      return <Tag>{html}</Tag>;
-    }
-
-    return (
-      <Tag>
-        {html.map((node, i) => (
-          // Either we should add the || node === null here or RenderO's renderFn should be changed to return an
-          // empty string when isContainerBlock or when !(isMentions() || isFormula() || isText())
-          <Fragment key={i}>
-            {node === '' || node === null ? br : node}
-          </Fragment>
-        ))}
-      </Tag>
-    );
   }
 
   private renderInline(
@@ -301,16 +271,14 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     if (op.isCustomEmbed()) {
       return this.renderCustom(op, contextOp);
     }
-    if (op.isContainerBlock()) {
-      return null;
-    }
-    if (op.isJustNewline()) {
-      return newLine;
-    }
-    if (op.isMentions() || op.isFormula() || op.isText()) {
-      return op.insert.value;
-    }
-    return null;
+    const ro = new RenderOp(op, this.state.converterOptions);
+    return ro.renderOp(
+      op.insert.value === '\n' ? null : (op.insert as InsertDataQuill).value,
+    );
+    // if (op.isMentions() || op.isFormula() || op.isText()) {
+    //   return ro.renderOp(op.insert.value === '\n' ? null : op.insert.value);
+    // }
+    // return null;
   }
 
   private renderVideo(op: DeltaInsertOp): ReactNode {

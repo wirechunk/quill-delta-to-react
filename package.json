@@ -18,7 +18,8 @@
     "prettier": "^3.2.5",
     "pretty-quick": "^4.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.4"
+    "typescript": "^5.4.4",
+    "vitest": "^1.4.0"
   },
   "peerDependencies": {
     "react": "^18.2.0",
@@ -29,7 +30,7 @@
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "typecheck": "./node_modules/typescript/bin/tsc --project ./tsconfig.test.json --noEmit",
-    "test": "node --loader ts-node/esm --test  test/*.test.ts test/**/*.test.ts test/*.test.tsx"
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",

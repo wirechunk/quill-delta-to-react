@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { OpToNodeConverterOptions, RenderOp } from '../src/render-op.js';
 import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
 import { InsertDataQuill } from '../src/InsertData.js';
@@ -14,7 +14,7 @@ import type { CSSProperties } from 'react';
 import type { OpAttributes } from '../src/OpAttributeSanitizer.js';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-describe('OpToHtmlConverter', () => {
+describe('RenderOp', () => {
   describe('constructor', () => {
     it('should set default options', () => {
       const ro = new RenderOp(
@@ -361,29 +361,6 @@ describe('OpToHtmlConverter', () => {
       assert.deepEqual(ro.getTagAttributes(), {});
     });
 
-    it('should return an object with a custom data attribute', () => {
-      const op = new DeltaInsertOp(
-        new InsertDataQuill(DataType.Image, 'https://example.com/image.png'),
-        {
-          something: 'wow',
-        },
-      );
-      const ro = new RenderOp(op, {
-        customAttributes: (op) => {
-          if (op.attributes.something) {
-            return {
-              'data-something': op.attributes.something,
-            };
-          }
-        },
-      });
-      assert.deepEqual(ro.getTagAttributes(), {
-        className: 'ql-image',
-        src: 'https://example.com/image.png',
-        'data-something': 'wow',
-      });
-    });
-
     it('should return an object with the proper attributes for an inline code element', () => {
       const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, ''), {
         code: true,
@@ -484,203 +461,194 @@ describe('OpToHtmlConverter', () => {
     });
   });
 
-  describe('renderNode', () => {
-    describe('render', () => {
-      it('should return children directly in a simple case with no formats', () => {
-        const op = new DeltaInsertOp(
-          new InsertDataQuill(DataType.Text, 'hello'),
-        );
-        const ro = new RenderOp(op);
-        assert.equal(
-          renderToStaticMarkup(ro.renderOp('something')),
-          'something',
-        );
-      });
+  describe('renderOp', () => {
+    it('should return children directly in a simple case with no formats', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'));
+      const ro = new RenderOp(op);
+      assert.equal(renderToStaticMarkup(ro.renderOp('something')), 'something');
+    });
 
-      it('should wrap its argument with attributes', () => {
-        const op = new DeltaInsertOp(
-          new InsertDataQuill(DataType.Text, 'hello'),
-          { bold: true, color: 'red' },
-        );
-        const ro = new RenderOp(op, {
-          inlineStyles: {
-            color: (value) =>
-              typeof value === 'string'
-                ? {
-                    color: value,
-                  }
-                : undefined,
-          },
-          customAttributes: () => ({
-            'data-custom': '',
-          }),
+    it('should wrap its argument with attributes', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, 'hello'),
+        { bold: true, color: 'red' },
+      );
+      const ro = new RenderOp(op, {
+        inlineStyles: {
+          color: (value) =>
+            typeof value === 'string'
+              ? {
+                  color: value,
+                }
+              : undefined,
+        },
+        customAttributes: () => ({
+          'data-custom': '',
+        }),
+      });
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('something')),
+        '<strong style="color:red" data-custom="">something</strong>',
+      );
+    });
+
+    it('should ignore children for an image', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
+      );
+      const ro = new RenderOp(op, {
+        customClasses: () => 'my-img',
+      });
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('something')),
+        '<img class="my-img ql-image" src="https://example.com/hello.png"/>',
+      );
+    });
+
+    it('should ignore children for an image link', () => {
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
+        {
+          link: 'https://example.com/hello',
+        },
+      );
+      const ro = new RenderOp(op, {
+        customClasses: () => 'my-img',
+      });
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('something')),
+        '<a href="https://example.com/hello"><img class="my-img ql-image" src="https://example.com/hello.png"/></a>',
+      );
+    });
+
+    it('should render the span tag for a formula', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Formula, '')),
+      );
+      assert.deepEqual(
+        renderToStaticMarkup(ro.renderOp('hello')),
+        '<span class="ql-formula">hello</span>',
+      );
+    });
+
+    it('should render the blockquote tag for a blockquote', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), {
+          blockquote: true,
+        }),
+      );
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('hello')),
+        '<blockquote>hello</blockquote>',
+      );
+    });
+
+    it('should render the pre tag for a code block', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), {
+          'code-block': true,
+        }),
+      );
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('hello')),
+        '<pre>hello</pre>',
+      );
+    });
+
+    it('should render the li tag for a list item', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), {
+          list: ListType.Bullet,
+        }),
+      );
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('hello')),
+        '<li>hello</li>',
+      );
+    });
+
+    it('should render a custom tag', () => {
+      const cases = [
+        ['code-block', 'div'],
+        ['bold', 'h2'],
+        ['list', 'li'],
+        ['header', 'h2'],
+      ] as const;
+      cases.forEach(([attr, expected]) => {
+        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, ''), {
+          [attr]: true,
+          header: 2,
         });
-        assert.equal(
-          renderToStaticMarkup(ro.renderOp('something')),
-          '<strong data-custom="" style="color:red">something</strong>',
-        );
-      });
-
-      it('should ignore children for an image', () => {
-        const op = new DeltaInsertOp(
-          new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
-        );
-        const ro = new RenderOp(op, {
-          customClasses: () => 'my-img',
-        });
-        assert.equal(
-          renderToStaticMarkup(ro.renderOp('something')),
-          '<img class="my-img ql-image" src="https://example.com/hello.png"/>',
-        );
-      });
-
-      it('should ignore children for an image link', () => {
-        const op = new DeltaInsertOp(
-          new InsertDataQuill(DataType.Image, 'https://example.com/hello.png'),
-          {
-            link: 'https://example.com/hello',
-          },
-        );
-        const ro = new RenderOp(op, {
-          customClasses: () => 'my-img',
-        });
-        assert.equal(
-          renderToStaticMarkup(ro.renderOp('something')),
-          '<a href="https://example.com/hello"><img class="my-img ql-image" src="https://example.com/hello.png"/></a>',
-        );
-      });
-
-      it('should render the span tag for a formula', () => {
-        const ro = new RenderOp(
-          new DeltaInsertOp(new InsertDataQuill(DataType.Formula, '')),
-        );
-        assert.deepEqual(
-          renderToStaticMarkup(ro.renderOp('hello')),
-          '<span class="ql-formula">hello</span>',
-        );
-      });
-
-      it('should render the blockquote tag for a blockquote', () => {
-        const ro = new RenderOp(
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), {
-            blockquote: true,
-          }),
-        );
-        assert.equal(
-          renderToStaticMarkup(ro.renderOp('hello')),
-          '<blockquote>hello</blockquote>',
-        );
-      });
-
-      it('should render the pre tag for a code block', () => {
-        const ro = new RenderOp(
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), {
-            'code-block': true,
-          }),
-        );
-        assert.equal(
-          renderToStaticMarkup(ro.renderOp('hello')),
-          '<pre>hello</pre>',
-        );
-      });
-
-      it('should render the li tag for a list item', () => {
-        const ro = new RenderOp(
-          new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), {
-            list: ListType.Bullet,
-          }),
-        );
-        assert.equal(
-          renderToStaticMarkup(ro.renderOp('hello')),
-          '<li>hello</li>',
-        );
-      });
-
-      it('should render a custom tag', () => {
-        const cases = [
-          ['code-block', 'div'],
-          ['bold', 'h2'],
-          ['list', 'li'],
-          ['header', 'h2'],
-        ] as const;
-        cases.forEach(([attr, expected]) => {
-          const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, ''), {
-            [attr]: true,
-            header: 2,
-          });
-          const ro = new RenderOp(op, {
-            customTag: (format) => {
-              if (format === 'code-block') {
-                return 'div';
-              }
-              if (format === 'bold') {
-                return 'b';
-              }
-            },
-          });
-          assert.deepEqual(
-            renderToStaticMarkup(ro.renderOp('hello')),
-            `<${expected}>hello</${expected}>`,
-          );
-        });
-      });
-
-      it('should render both custom inline tags and built-in inline tags nested', () => {
-        const attributes: OpAttributes = {
-          bold: true,
-          italic: true,
-          mentions: true,
-          strike: true,
-          underline: true,
-        };
-        const op = new DeltaInsertOp(
-          new InsertDataQuill(DataType.Text, 'hello'),
-          attributes,
-        );
         const ro = new RenderOp(op, {
           customTag: (format) => {
-            if (format === 'mentions') {
-              // Note the default is 'a'.
-              return 'span';
+            if (format === 'code-block') {
+              return 'div';
             }
-            if (format === 'strike') {
-              return 'cite';
+            if (format === 'bold') {
+              return 'b';
             }
-            return undefined;
           },
         });
-        assert.equal(
+        assert.deepEqual(
           renderToStaticMarkup(ro.renderOp('hello')),
-          '<span><strong><em><cite><u>hello</u></cite></em></strong></span>',
+          `<${expected}>hello</${expected}>`,
         );
       });
+    });
 
-      it('should return the proper tag for a block insert with custom tags and attributes', () => {
-        const cases = [
-          ['blockquote', 'blockquote'],
-          ['code-block', 'pre'],
-          ['list', 'li'],
-          ['attr1', 'div'],
-        ] as const;
-
-        cases.forEach(([attribute, expected]) => {
-          const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, ''), {
-            [attribute]: true,
-            renderAsBlock: true,
-          });
-          const ro = new RenderOp(op, {
-            customTag: (format, op) => {
-              if (format === 'renderAsBlock' && op.attributes['attr1']) {
-                return 'div';
-              }
-            },
-          });
-          assert.equal(
-            renderToStaticMarkup(ro.renderOp('hello')),
-            `<${expected}>hello</${expected}>`,
-          );
-        });
+    it('should render both custom inline tags and built-in inline tags nested', () => {
+      const attributes: OpAttributes = {
+        bold: true,
+        italic: true,
+        mentions: true,
+        strike: true,
+        underline: true,
+      };
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, 'hello'),
+        attributes,
+      );
+      const ro = new RenderOp(op, {
+        customTag: (format) => {
+          if (format === 'mentions') {
+            // Note the default is 'a'.
+            return 'span';
+          }
+          if (format === 'strike') {
+            return 'cite';
+          }
+          return undefined;
+        },
       });
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('hello')),
+        '<span><strong><em><cite><u>hello</u></cite></em></strong></span>',
+      );
+    });
+
+    it('should return the proper tag for a block insert with custom tags and attributes', () => {
+      const cases = [
+        ['blockquote', 'blockquote'],
+        ['code-block', 'pre'],
+        ['list', 'li'],
+      ] as const;
+
+      cases.forEach(([attribute, expected]) => {
+        const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, ''), {
+          [attribute]: true,
+        });
+        const ro = new RenderOp(op);
+        assert.equal(
+          renderToStaticMarkup(ro.renderOp('hello')),
+          `<${expected}>hello</${expected}>`,
+        );
+      });
+    });
+
+    it('should return the insert plainly when it has no attributes', () => {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, ''));
+      const ro = new RenderOp(op);
+      assert.equal(renderToStaticMarkup(ro.renderOp('hello')), 'hello');
     });
 
     it('should return proper HTML content for a complex op', () => {
@@ -699,13 +667,18 @@ describe('OpToHtmlConverter', () => {
 
       const ro = new RenderOp(
         new DeltaInsertOp(
+          // Notice this value should be ignored.
           new InsertDataQuill(DataType.Text, 'aaa'),
           attributes,
         ),
       );
       assert.equal(
-        renderToStaticMarkup(ro.renderOp(null)),
-        `<a style="color:red;background-color:#fff" class="ql-font-verdana ql-size-small" href="https://example.com/hello"><sup><strong><em><s><u>aaa</u></s></em></strong></sup></a>`,
+        renderToStaticMarkup(ro.renderOp()),
+        `<a style="color:red;background-color:#fff" class="ql-font-verdana ql-size-small" href="https://example.com/hello"><sup><strong><em><s><u></u></s></em></strong></sup></a>`,
+      );
+      assert.equal(
+        renderToStaticMarkup(ro.renderOp('hello')),
+        `<a style="color:red;background-color:#fff" class="ql-font-verdana ql-size-small" href="https://example.com/hello"><sup><strong><em><s><u>hello</u></s></em></strong></sup></a>`,
       );
     });
 
@@ -737,12 +710,12 @@ describe('OpToHtmlConverter', () => {
 
     it('should return proper HTML content for a formula', () => {
       const ro = new RenderOp(
-        new DeltaInsertOp(new InsertDataQuill(DataType.Formula, 'ff'), {
+        new DeltaInsertOp(new InsertDataQuill(DataType.Formula, ''), {
           bold: true,
         }),
       );
       assert.equal(
-        renderToStaticMarkup(ro.renderOp(null)),
+        renderToStaticMarkup(ro.renderOp('ff')),
         '<span class="ql-formula">ff</span>',
       );
     });
@@ -759,7 +732,7 @@ describe('OpToHtmlConverter', () => {
       });
       assert.equal(
         renderToStaticMarkup(ro.renderOp(null)),
-        '<img alt="Hello" class="my-custom-class ql-image" src="https://example.com/hello.png"/>',
+        '<img class="my-custom-class ql-image" src="https://example.com/hello.png" alt="Hello"/>',
       );
     });
 

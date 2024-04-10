@@ -40,7 +40,6 @@ var html = converter.convert();
 |`multiLineBlockquote`| boolean | true | Instead of rendering multiple `blockquote` elements for quotes that are consecutive and have same styles(`align`, `indent`, and `direction`), it renders them into only one                                             |
 |`multiLineHeader`| boolean | true | Same deal as `multiLineBlockquote` for headers                                                                                                                                                                          |
 |`multiLineCodeBlock`| boolean | true | Same deal as `multiLineBlockquote` for code-blocks                                                                                                                                                                      |
-|`multiLineParagraph`| boolean | true | Set to false to generate a new paragraph tag after each enter press (new line)                                                                                                                                          |
 |`linkRel`| string | none | Specifies a value to put on the `rel` attr on all links. This can be overridden by an individual link op by specifying the `rel` attribute in the respective op's attributes                                            |
 |`linkTarget`| string | '_blank' | Specifies target for all links; use `''` (empty string) to not generate `target` attribute. This can be overridden by an individual link op by specifiying the `target` with a value in the respective op's attributes. |
 |`allowBackgroundClasses`| boolean | false | If true, classes will be added for the background attr                                                                                                                                                                  |
@@ -88,6 +87,6 @@ Keys to this object are the names of attributes from Quill. The values are eithe
 
 If you want to do the full rendering yourself, you can do so by getting the processed and grouped ops.
 
-`BlotBlock` represents custom blots with `renderAsBlock:true` property pair in its attributes
+`BlotBlock` represents custom blots with a `renderAsBlock: true` property in its attributes.
 
 See above for `op object` format. 

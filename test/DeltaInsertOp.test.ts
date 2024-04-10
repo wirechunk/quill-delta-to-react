@@ -1,9 +1,8 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
-
 import { InsertDataQuill } from '../src/InsertData.js';
 import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
-import { DataType, AlignType, ListType } from '../src/value-types.js';
+import { DataType, ListType } from '../src/value-types.js';
 
 describe('DeltaInsertOp', () => {
   describe('constructor', function () {
@@ -36,28 +35,7 @@ describe('DeltaInsertOp', () => {
     });
   });
 
-  describe('hasSameAdiAs', function () {
-    it('should successfully if two ops have same align indent and direction', function () {
-      var op1 = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        align: AlignType.Right,
-        indent: 2,
-      });
-      var op2 = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        align: AlignType.Right,
-        indent: 2,
-      });
-
-      assert.ok(op1.hasSameAdiAs(op2));
-
-      var op2 = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        align: AlignType.Right,
-        indent: 3,
-      });
-      assert.ok(!op1.hasSameAdiAs(op2));
-    });
-  });
-
-  describe('isInline()', function () {
+  describe('isInline', function () {
     it('should return true if op is an inline', function () {
       var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
       assert.equal(op.isInline(), true);

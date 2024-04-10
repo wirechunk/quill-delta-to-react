@@ -76,8 +76,8 @@ export function sliceFromReverseWhile<T>(
   startIndex: number,
   predicate: (currElm: T) => boolean,
 ): ArraySlice<T> {
-  const result = {
-    elements: [] as any[],
+  const result: ArraySlice<T> = {
+    elements: [],
     sliceStartsAt: -1,
   };
   for (let i = startIndex; i >= 0; i--) {

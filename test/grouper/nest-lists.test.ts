@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
 import { nestLists } from '../../src/grouper/nest-lists.js';
 import { DeltaInsertOp } from './../../src/DeltaInsertOp.js';
