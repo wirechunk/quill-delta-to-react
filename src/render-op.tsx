@@ -155,7 +155,8 @@ export class RenderOp<Insert extends InsertData> {
     const attributes = this.getTagAttributes();
 
     if (this.op.isJustNewline() && !Object.keys(attributes).length) {
-      return null;
+      // todo
+      // return null;
     }
 
     if (this.options.customAttributes) {

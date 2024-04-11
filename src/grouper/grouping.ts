@@ -71,18 +71,17 @@ export const groupConsecutiveSameStyleBlocks = (
     groups,
     BlockGroup,
     (g, gPrev) =>
-      (options.multiLineBlockquote && areBothSameBlockquotes(g, gPrev)) ||
-      (options.multiLineCodeBlock && areBothSameCodeBlocks(g, gPrev)) ||
-      (options.multiLineHeader && areBothSameHeaders(g, gPrev)),
+      ((options.multiLineBlockquote && areBothBlockquotes(g, gPrev)) ||
+        (options.multiLineCodeBlock && areBothCodeBlocks(g, gPrev)) ||
+        (options.multiLineHeader && areBothHeaders(g, gPrev))) &&
+      g.op.hasSameAttr(gPrev.op),
   );
 
-const areBothSameCodeBlocks = (g: BlockGroup, gOther: BlockGroup) =>
-  g.op.isCodeBlock() && gOther.op.isCodeBlock() && g.op.hasSameAttr(gOther.op);
+const areBothBlockquotes = (g: BlockGroup, gOther: BlockGroup) =>
+  g.op.isBlockquote() && gOther.op.isBlockquote();
 
-const areBothSameHeaders = (g: BlockGroup, gOther: BlockGroup) =>
-  g.op.isHeader() && gOther.op.isHeader() && g.op.hasSameAttr(gOther.op);
+const areBothCodeBlocks = (g: BlockGroup, gOther: BlockGroup) =>
+  g.op.isCodeBlock() && gOther.op.isCodeBlock();
 
-const areBothSameBlockquotes = (g: BlockGroup, gOther: BlockGroup) =>
-  g.op.isBlockquote() &&
-  gOther.op.isBlockquote() &&
-  g.op.hasSameAttr(gOther.op);
+const areBothHeaders = (g: BlockGroup, gOther: BlockGroup) =>
+  g.op.isHeader() && gOther.op.isHeader();

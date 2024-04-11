@@ -27,22 +27,15 @@ export const convertInsertValue = (
     return new InsertDataQuill(DataType.Text, insert);
   }
 
-  const keys = Object.keys(insert);
-  if (!keys.length) {
-    return null;
-  }
-
-  const { urlSanitizer } = sanitizeOptions;
-
   return DataType.Image in insert
     ? new InsertDataQuill(
         DataType.Image,
-        urlSanitizer(insert[DataType.Image] as string),
+        sanitizeOptions.urlSanitizer(insert[DataType.Image] as string),
       )
     : DataType.Video in insert
       ? new InsertDataQuill(
           DataType.Video,
-          urlSanitizer(insert[DataType.Video] as string),
+          sanitizeOptions.urlSanitizer(insert[DataType.Video] as string),
         )
       : DataType.Formula in insert
         ? new InsertDataQuill(

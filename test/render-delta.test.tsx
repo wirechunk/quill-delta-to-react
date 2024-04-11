@@ -734,10 +734,10 @@ describe('RenderDelta', () => {
         const rd = new RenderDelta({
           ops,
           customRenderer: (op) => {
-            if ('boldAndItalic' in op.insert) {
+            if ('boldAndItalic' in op.insert.value) {
               return (
                 <b>
-                  <i>{op.insert.boldAndItalic as string}</i>
+                  <i>{op.insert.value.boldAndItalic as string}</i>
                 </b>
               );
             }
@@ -843,8 +843,8 @@ describe('RenderDelta', () => {
         ];
 
         const customRenderer: CustomRenderer = (op) => {
-          if ('colonizer' in op.insert) {
-            return op.insert.colonizer as string;
+          if ('colonizer' in op.insert.value) {
+            return op.insert.value.colonizer as string;
           }
           return null;
         };
@@ -892,8 +892,8 @@ describe('RenderDelta', () => {
         ];
 
         const customRenderer: CustomRenderer = (op) => {
-          if ('colonizer' in op.insert) {
-            return op.insert.colonizer as string;
+          if ('colonizer' in op.insert.value) {
+            return op.insert.value.colonizer as string;
           }
           return '';
         };
