@@ -180,12 +180,13 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
         return new BlockGroup(
           elm[0].op,
           elm.flatMap((g, i) => {
-            if (!g.ops.length) {
-              return [DeltaInsertOp.createNewLineOp()];
+            if (g.ops.length) {
+              if (i < groupsLastInd) {
+                return [...g.ops, DeltaInsertOp.createNewLineOp()];
+              }
+              return g.ops;
             }
-            return g.ops.concat(
-              i < groupsLastInd ? [DeltaInsertOp.createNewLineOp()] : [],
-            );
+            return [g.op];
           }),
         );
       }
@@ -251,15 +252,31 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       );
     }
 
-    return converter.renderOp(ops.map((op) => this.renderInline(op, blockOp)));
+    const lastInd = ops.length - 1;
+    return converter.renderOp(
+      ops.map((op, i) => {
+        // if (op.isCustomEmbed()) {
+        //   return this.renderCustom(op, blockOp);
+        // }
+        if (op.isJustNewline()) {
+          return i < lastInd ? '\n' : null;
+        }
+        return this.renderInline(op, blockOp);
+        // return op.insert.value as string;
+        // const ro = new RenderOp(op, this.state.converterOptions);
+        // return ro.renderOp(
+        //   op.insert.value === '\n' ? null : (op.insert as InsertDataQuill).value,
+        // );
+      }),
+    );
   }
 
   private renderInlines(ops: DeltaInsertOp[]): ReactNode[] {
-    // const lastIndex = ops.length - 1;
+    const lastIndex = ops.length - 1;
     return ops.map((op, i) => {
-      // if (i > 0 && i === lastIndex && op.isJustNewline()) {
-      //   return null;
-      // }
+      if (i > 0 && i === lastIndex && op.isJustNewline()) {
+        return null;
+      }
       return this.renderInline(op, null);
     });
   }
@@ -275,10 +292,6 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     return ro.renderOp(
       op.insert.value === '\n' ? null : (op.insert as InsertDataQuill).value,
     );
-    // if (op.isMentions() || op.isFormula() || op.isText()) {
-    //   return ro.renderOp(op.insert.value === '\n' ? null : op.insert.value);
-    // }
-    // return null;
   }
 
   private renderVideo(op: DeltaInsertOp): ReactNode {

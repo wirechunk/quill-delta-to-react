@@ -13,8 +13,8 @@ export const groupConsecutiveSatisfyingClassElementsWhile = <T, GroupT>(
   arr: T[],
   classType: new (...args: any[]) => GroupT,
   predicate?: (currElm: GroupT, prevElm: GroupT) => boolean,
-): Array<T | GroupT | GroupT[]> => {
-  const groups: Array<T | GroupT | GroupT[]> = [];
+): Array<T | GroupT | [GroupT, ...GroupT[]]> => {
+  const groups: Array<T | GroupT | [GroupT, ...GroupT[]]> = [];
 
   for (let i = 0; i < arr.length; i++) {
     const currElm = arr[i];
@@ -46,8 +46,8 @@ export const groupConsecutiveSatisfyingClassElementsWhile = <T, GroupT>(
 export const groupConsecutiveElementsWhile = <T>(
   arr: T[],
   predicate: (currElm: T, prevElm: T) => boolean,
-): Array<T | T[]> => {
-  const groups: Array<T | T[]> = [];
+): Array<T | [T, ...T[]]> => {
+  const groups: Array<T | [T, ...T[]]> = [];
 
   for (let i = 0; i < arr.length; i++) {
     const currElm = arr[i];

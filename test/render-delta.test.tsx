@@ -81,6 +81,50 @@ describe('RenderDelta', () => {
       );
     });
 
+    it('should render a paragraph for each new line', () => {
+      const rd = new RenderDelta({
+        ops: [{ insert: '\na\nb\n' }],
+      });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p></p><p>a</p><p>b</p>',
+      );
+    });
+
+    it('should render lines with mixed styles', () => {
+      const ops = [
+        { insert: 'a', attributes: { color: 'red', italic: true } },
+        { insert: '\n\nb\n' },
+      ];
+      const rd = new RenderDelta({ ops });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p><em style="color:red">a</em></p><p></p><p>b</p>',
+      );
+    });
+
+    it('should render an inline with a custom tag', () => {
+      const rd = new RenderDelta({
+        ops: [
+          { insert: 'Hello' },
+          { insert: ' my ', attributes: { italic: true } },
+          { insert: '\n' },
+          { insert: ' name is joey' },
+        ],
+        options: {
+          customTag: (format) => {
+            if (format === 'italic') {
+              return 'i';
+            }
+          },
+        },
+      });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p>Hello<i> my </i></p><p> name is joey</p>',
+      );
+    });
+
     it('should render a mention with a custom tag', () => {
       const ops = [
         {
@@ -385,7 +429,59 @@ describe('RenderDelta', () => {
         renderToStaticMarkup(rd.render()),
         `<p><small>line 1</small></p><p>line 2<span data-attr1="true">yo</span></p><p>line 3</p><p>${encodeHtml(
           '<p>line 4</p>',
-        )}</p><p>line 5<span style="color:red" class="ql-test" data-attr1="test"></span></p>`,
+        )}</p><p>line 5</p>`,
+      );
+    });
+
+    it('should render styling within a single-line header', () => {
+      const ops = [
+        { insert: 'Hello ' },
+        { insert: 'there', attributes: { italic: true } },
+        { insert: ' yo' },
+        { insert: '\n', attributes: { header: 1 } },
+      ];
+      const rd = new RenderDelta({ ops });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<h1>Hello <em>there</em> yo</h1>',
+      );
+    });
+
+    it('should render styling within a multi-line header', () => {
+      const ops = [
+        { insert: 'Hello ' },
+        { insert: 'there', attributes: { italic: true } },
+        { insert: '\n', attributes: { header: 1 } },
+        { insert: 'yo' },
+        { insert: '\n', attributes: { header: 1 } },
+      ];
+      const rd = new RenderDelta({ ops });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<h1>Hello <em>there</em>\nyo</h1>',
+      );
+    });
+
+    it('should convert using custom URL sanitizer', () => {
+      const ops = [
+        { attributes: { link: 'http://yahoo<%=abc%>/ed' }, insert: 'test' },
+        { attributes: { link: 'http://abc<' }, insert: 'hi' },
+      ];
+
+      const rd = new RenderDelta({
+        ops,
+        options: {
+          urlSanitizer: (url) => {
+            if (url.includes('<%')) {
+              return 'REDACTED';
+            }
+            return url;
+          },
+        },
+      });
+      assert.equal(
+        renderToStaticMarkup(rd.render()),
+        '<p><a href="REDACTED" target="_blank">test</a><a href="http://abc&lt;" target="_blank">hi</a></p>',
       );
     });
 
@@ -455,29 +551,6 @@ describe('RenderDelta', () => {
           ].join(''),
         );
       });
-    });
-
-    it('should convert using custom url sanitizer', () => {
-      const ops = [
-        { attributes: { link: 'http://yahoo<%=abc%>/ed' }, insert: 'test' },
-        { attributes: { link: 'http://abc<' }, insert: 'hi' },
-      ];
-
-      const rd = new RenderDelta({
-        ops,
-        options: {
-          urlSanitizer: (url) => {
-            if (url.includes('<%')) {
-              return 'REDACTED';
-            }
-            return url;
-          },
-        },
-      });
-      assert.equal(
-        renderToStaticMarkup(rd.render()),
-        '<p><a href="REDACTED" target="_blank">test</a><a href="http://abc&lt;" target="_blank">hi</a></p>',
-      );
     });
 
     describe('tables', () => {
@@ -641,7 +714,7 @@ describe('RenderDelta', () => {
             `<tr><td data-row="row-2">21</td><td data-row="row-2">22</td><td data-row="row-2">23</td></tr>`,
             `<tr><td data-row="row-3">31</td><td data-row="row-3">32</td><td data-row="row-3">33</td></tr>`,
             `</tbody></table>`,
-            `<p><br/></p>`,
+            `<p></p>`,
           ].join(''),
         );
       });
@@ -882,15 +955,6 @@ describe('RenderDelta', () => {
       });
 
       describe('inside headers', () => {
-        const ops = [
-          { insert: { colonizer: ':' } },
-          { insert: '\n', attributes: { header: 1 } },
-          { insert: 'hello' },
-          { insert: '\n', attributes: { header: 1 } },
-          { insert: { colonizer: ':' } },
-          { insert: '\n', attributes: { header: 1 } },
-        ];
-
         const customRenderer: CustomRenderer = (op) => {
           if ('colonizer' in op.insert.value) {
             return op.insert.value.colonizer as string;
@@ -899,62 +963,43 @@ describe('RenderDelta', () => {
         };
 
         it('should render a simple custom insert type', () => {
-          const rd = new RenderDelta({ ops: ops.slice(0, 2), customRenderer });
+          const rd = new RenderDelta({
+            ops: [
+              { insert: { colonizer: ':' } },
+              { insert: '\n', attributes: { header: 1 } },
+            ],
+            customRenderer,
+          });
           assert.equal(renderToStaticMarkup(rd.render()), '<h1>:</h1>');
         });
 
         it('should render a custom insert type among other inserts', () => {
-          const rd = new RenderDelta({ ops, customRenderer });
-          assert.equal(
-            renderToStaticMarkup(rd.render()),
-            '<h1>:<br/>hello<br/>:</h1>',
-          );
+          const rd = new RenderDelta({
+            ops: [
+              { insert: { colonizer: ':' } },
+              { insert: '\n', attributes: { header: 1 } },
+              { insert: 'hello' },
+              { insert: '\n', attributes: { header: 1 } },
+              { insert: { colonizer: ';' } },
+              { insert: '\n', attributes: { header: 1 } },
+            ],
+            customRenderer,
+          });
+          assert.equal(renderToStaticMarkup(rd.render()), '<h1>:hello;</h1>');
         });
       });
     });
 
-    it('should render inlines with a custom tag', function () {
-      const rd = new RenderDelta({
-        ops: [
-          { insert: 'Hello' },
-          { insert: ' my ', attributes: { italic: true } },
-          { insert: '\n' },
-          { insert: ' name is joey' },
-        ],
-        options: {
-          customTag: (format) => {
-            if (format === 'italic') {
-              return 'i';
-            }
-          },
-        },
+    describe('multi-line headers', () => {
+      it('should render multi-line headers of the same style', () => {
+        const rd = new RenderDelta({
+          ops: [
+            { insert: 'hello\n', attributes: { header: 1 } },
+            { insert: 'bye\n', attributes: { header: 1 } },
+          ],
+        });
+        assert.equal(renderToStaticMarkup(rd.render()), '<h1>hello\nbye</h1>');
       });
-      assert.equal(
-        renderToStaticMarkup(rd.render()),
-        '<p>Hello<i> my </i></p><p> name is joey</p>',
-      );
-    });
-
-    it('should render a paragraph for each new line', () => {
-      const rd = new RenderDelta({
-        ops: [{ insert: '\na\nb\n' }],
-      });
-      assert.equal(
-        renderToStaticMarkup(rd.render()),
-        '<p></p><p>a</p><p>b</p>',
-      );
-    });
-
-    it('should render lines with mixed styles', () => {
-      const ops = [
-        { insert: 'a', attributes: { color: 'red', italic: true } },
-        { insert: '\n\nb\n' },
-      ];
-      const rd = new RenderDelta({ ops });
-      assert.equal(
-        renderToStaticMarkup(rd.render()),
-        '<p><em style="color:red">a</em></p><p></p><p>b</p>',
-      );
     });
   });
 

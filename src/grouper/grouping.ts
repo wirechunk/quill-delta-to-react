@@ -66,7 +66,7 @@ export const groupConsecutiveSameStyleBlocks = (
     multiLineCodeBlock: boolean;
     multiLineHeader: boolean;
   },
-): Array<TDataGroup | BlockGroup[]> =>
+): Array<TDataGroup | [BlockGroup, ...BlockGroup[]]> =>
   groupConsecutiveSatisfyingClassElementsWhile(
     groups,
     BlockGroup,

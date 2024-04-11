@@ -150,6 +150,40 @@ describe('groupConsecutiveSameStyleBlocks', () => {
     ]);
   });
 
+  it('should combine header blocks with the same style when they have text', () => {
+    const ops = [
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), {
+        header: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        header: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'bye'), {
+        header: 1,
+      }),
+      new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+        header: 1,
+      }),
+    ];
+
+    const pairs = pairOpsWithTheirBlock(ops);
+
+    const groups = groupConsecutiveSameStyleBlocks(pairs, {
+      multiLineBlockquote: false,
+      multiLineCodeBlock: false,
+      multiLineHeader: true,
+    });
+
+    assert.deepEqual(groups, [
+      [
+        new BlockGroup(ops[0], []),
+        new BlockGroup(ops[1], []),
+        new BlockGroup(ops[2], []),
+        new BlockGroup(ops[3], []),
+      ],
+    ]);
+  });
+
   it('should not combine code blocks with different attributes', () => {
     const ops = [
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
