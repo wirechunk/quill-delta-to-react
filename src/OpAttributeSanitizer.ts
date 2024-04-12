@@ -1,15 +1,18 @@
-import { ListType, AlignType, DirectionType, ScriptType } from './value-types';
-import { MentionSanitizer } from './mentions/MentionSanitizer';
-import { IMention } from './mentions/MentionSanitizer';
-import { find } from './helpers/array';
-import { OpLinkSanitizer } from './OpLinkSanitizer';
+import {
+  ListType,
+  AlignType,
+  DirectionType,
+  ScriptType,
+} from './value-types.js';
+import { sanitizeMention } from './sanitize-mention.js';
+import type { Mention } from './sanitize-mention.js';
 
-interface IOpAttributes {
+export type OpAttributes = {
   background?: string | undefined;
   color?: string | undefined;
   font?: string | undefined;
   size?: string | undefined;
-  width?: string | undefined;
+  width?: string | number | undefined;
 
   link?: string | undefined;
   bold?: boolean | undefined;
@@ -23,40 +26,54 @@ interface IOpAttributes {
   list?: ListType;
   blockquote?: boolean | undefined;
   'code-block'?: string | boolean | undefined;
-  header?: number | undefined;
+  header?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
   align?: AlignType;
   direction?: DirectionType;
   indent?: number | undefined;
   table?: string | undefined;
 
   mentions?: boolean | undefined;
-  mention?: IMention | undefined;
+  mention?: Mention | undefined;
   target?: string | undefined;
   rel?: string | undefined;
 
-  // should this custom blot be rendered as block?
+  // Set renderAsBlock to true on a custom blot to render it as block.
   renderAsBlock?: boolean | undefined;
-  [key: string]: any;
-}
+  [key: string]: unknown;
+};
 
-interface IUrlSanitizerFn {
-  (url: string): string | undefined;
-}
-interface IOpAttributeSanitizerOptions {
-  urlSanitizer?: IUrlSanitizerFn;
-}
+export type OpAttributeSanitizerOptions = {
+  urlSanitizer: (url: string) => string;
+};
 
-class OpAttributeSanitizer {
+const validFontNameRegex = /^[a-z0-9 -]{1,50}$/i;
+
+const validRelRegex = /^[a-z\s-]{1,250}$/i;
+
+const validTargetRegex = /^[\w-]{1,50}$/i;
+
+const alignTypes = Object.values(AlignType);
+
+const isAlignType = (align: unknown): align is AlignType =>
+  alignTypes.includes(align as never);
+
+const listTypes = Object.values(ListType);
+
+const isListType = (list: unknown): list is ListType =>
+  listTypes.includes(list as never);
+
+export class OpAttributeSanitizer {
   static sanitize(
-    dirtyAttrs: IOpAttributes,
-    sanitizeOptions: IOpAttributeSanitizerOptions
-  ): IOpAttributes {
-    var cleanAttrs: any = {};
+    dirtyAttrs: Record<string | number | symbol, unknown>,
+    sanitizeOptions: OpAttributeSanitizerOptions,
+  ): OpAttributes {
+    const cleanAttrs: OpAttributes = {};
 
     if (!dirtyAttrs || typeof dirtyAttrs !== 'object') {
       return cleanAttrs;
     }
-    let booleanAttrs = [
+
+    const booleanAttrs = [
       'bold',
       'italic',
       'underline',
@@ -65,11 +82,11 @@ class OpAttributeSanitizer {
       'blockquote',
       'code-block',
       'renderAsBlock',
-    ];
+    ] as const;
 
-    let colorAttrs = ['background', 'color'];
+    const colorAttrs = ['background', 'color'] as const;
 
-    let {
+    const {
       font,
       size,
       link,
@@ -85,9 +102,10 @@ class OpAttributeSanitizer {
       target,
       rel,
     } = dirtyAttrs;
-    let codeBlock = dirtyAttrs['code-block'];
 
-    let sanitizedAttrs = [
+    const codeBlock = dirtyAttrs['code-block'];
+
+    const sanitizedAttrs = [
       ...booleanAttrs,
       ...colorAttrs,
       'font',
@@ -106,79 +124,87 @@ class OpAttributeSanitizer {
       'rel',
       'code-block',
     ];
-    booleanAttrs.forEach(function (prop: string) {
-      var v = (<any>dirtyAttrs)[prop];
+
+    booleanAttrs.forEach((prop) => {
+      const v = dirtyAttrs[prop];
       if (v) {
         cleanAttrs[prop] = !!v;
       }
     });
 
-    colorAttrs.forEach(function (prop: string) {
-      var val = (<any>dirtyAttrs)[prop];
+    colorAttrs.forEach((prop) => {
+      const val = dirtyAttrs[prop];
       if (
-        val &&
-        (OpAttributeSanitizer.IsValidHexColor(val + '') ||
-          OpAttributeSanitizer.IsValidColorLiteral(val + '') ||
-          OpAttributeSanitizer.IsValidRGBColor(val + ''))
+        typeof val === 'string' &&
+        (OpAttributeSanitizer.isValidHexColor(val) ||
+          OpAttributeSanitizer.IsValidColorLiteral(val) ||
+          OpAttributeSanitizer.IsValidRGBColor(val))
       ) {
         cleanAttrs[prop] = val;
       }
     });
 
-    if (font && OpAttributeSanitizer.IsValidFontName(font + '')) {
+    if (
+      typeof font === 'string' &&
+      OpAttributeSanitizer.isValidFontName(font)
+    ) {
       cleanAttrs.font = font;
     }
 
-    if (size && OpAttributeSanitizer.IsValidSize(size + '')) {
+    if (typeof size === 'string' && OpAttributeSanitizer.isValidSize(size)) {
       cleanAttrs.size = size;
     }
 
-    if (width && OpAttributeSanitizer.IsValidWidth(width + '')) {
+    if (
+      width &&
+      (typeof width === 'number' || typeof width === 'string') &&
+      OpAttributeSanitizer.IsValidWidth(width + '')
+    ) {
       cleanAttrs.width = width;
     }
 
-    if (link) {
-      cleanAttrs.link = OpLinkSanitizer.sanitize(link + '', sanitizeOptions);
+    if (link && typeof link === 'string') {
+      cleanAttrs.link = sanitizeOptions.urlSanitizer(link);
     }
-    if (target && OpAttributeSanitizer.isValidTarget(target)) {
+
+    if (
+      typeof target === 'string' &&
+      OpAttributeSanitizer.isValidTarget(target)
+    ) {
       cleanAttrs.target = target;
     }
 
-    if (rel && OpAttributeSanitizer.IsValidRel(rel)) {
+    if (typeof rel === 'string' && OpAttributeSanitizer.IsValidRel(rel)) {
       cleanAttrs.rel = rel;
     }
 
     if (codeBlock) {
-      if (OpAttributeSanitizer.IsValidLang(codeBlock)) {
+      if (
+        typeof codeBlock === 'string' &&
+        OpAttributeSanitizer.IsValidLang(codeBlock)
+      ) {
         cleanAttrs['code-block'] = codeBlock;
       } else {
         cleanAttrs['code-block'] = !!codeBlock;
       }
     }
 
-    if (script === ScriptType.Sub || ScriptType.Super === script) {
+    if (script === ScriptType.Sub || script === ScriptType.Super) {
       cleanAttrs.script = script;
     }
 
-    if (
-      list === ListType.Bullet ||
-      list === ListType.Ordered ||
-      list === ListType.Checked ||
-      list === ListType.Unchecked
-    ) {
+    if (isListType(list)) {
       cleanAttrs.list = list;
     }
 
-    if (Number(header)) {
-      cleanAttrs.header = Math.min(Number(header), 6);
+    if (header && !isNaN(Number(header))) {
+      cleanAttrs.header = Math.max(
+        Math.min(Math.round(Number(header)), 6),
+        1,
+      ) as 1 | 2 | 3 | 4 | 5 | 6;
     }
 
-    if (
-      find(
-        [AlignType.Center, AlignType.Right, AlignType.Justify, AlignType.Left],
-        (a) => a === align
-      )
-    ) {
+    if (isAlignType(align)) {
       cleanAttrs.align = align;
     }
 
@@ -191,25 +217,20 @@ class OpAttributeSanitizer {
     }
 
     if (mentions && mention) {
-      let sanitizedMention = MentionSanitizer.sanitize(
-        mention,
-        sanitizeOptions
-      );
-      if (Object.keys(sanitizedMention).length > 0) {
-        cleanAttrs.mentions = !!mentions;
-        cleanAttrs.mention = mention;
-      }
+      cleanAttrs.mentions = !!mentions;
+      cleanAttrs.mention = sanitizeMention(mention, sanitizeOptions);
     }
+
     return Object.keys(dirtyAttrs).reduce((cleaned, k) => {
-      // this is a custom attr, put it back
-      if (sanitizedAttrs.indexOf(k) === -1) {
-        cleaned[k] = (<any>dirtyAttrs)[k];
+      // This is a custom attribute. Put it back.
+      if (!sanitizedAttrs.includes(k)) {
+        cleaned[k] = dirtyAttrs[k];
       }
       return cleaned;
     }, cleanAttrs);
   }
 
-  static IsValidHexColor(colorStr: string) {
+  static isValidHexColor(colorStr: string) {
     return !!colorStr.match(/^#([0-9A-F]{6}|[0-9A-F]{3})$/i);
   }
 
@@ -218,16 +239,17 @@ class OpAttributeSanitizer {
   }
 
   static IsValidRGBColor(colorStr: string) {
-    const re = /^rgb\(((0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d),\s*){2}(0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d)\)$/i;
+    const re =
+      /^rgb\(((0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d),\s*){2}(0|25[0-5]|2[0-4]\d|1\d\d|0?\d?\d)\)$/i;
     return !!colorStr.match(re);
   }
 
-  static IsValidFontName(fontName: string) {
-    return !!fontName.match(/^[a-z\s0-9\- ]{1,30}$/i);
+  static isValidFontName(fontName: string) {
+    return validFontNameRegex.test(fontName);
   }
 
-  static IsValidSize(size: string) {
-    return !!size.match(/^[a-z0-9\-]{1,20}$/i);
+  static isValidSize(size: string) {
+    return !!size.match(/^[a-z0-9-]{1,20}$/i);
   }
 
   static IsValidWidth(width: string) {
@@ -235,24 +257,17 @@ class OpAttributeSanitizer {
   }
 
   static isValidTarget(target: string) {
-    return !!target.match(/^[_a-zA-Z0-9\-]{1,50}$/);
+    return validTargetRegex.test(target);
   }
 
   static IsValidRel(relStr: string) {
-    return !!relStr.match(/^[a-zA-Z\s\-]{1,250}$/i);
+    return validRelRegex.test(relStr);
   }
 
   static IsValidLang(lang: string | boolean) {
     if (typeof lang === 'boolean') {
       return true;
     }
-    return !!lang.match(/^[a-zA-Z\s\-\\\/\+]{1,50}$/i);
+    return !!lang.match(/^[a-z\s\-\\/+]{1,50}$/i);
   }
 }
-
-export {
-  OpAttributeSanitizer,
-  IOpAttributes,
-  IOpAttributeSanitizerOptions,
-  IUrlSanitizerFn,
-};

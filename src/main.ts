@@ -1,22 +1,19 @@
-// main entry file for node
-export { QuillDeltaToHtmlConverter } from './QuillDeltaToHtmlConverter';
-export { OpToHtmlConverter } from './OpToHtmlConverter';
+export { RenderDelta } from './render-delta.js';
 export {
-  InlineGroup,
-  VideoItem,
   BlockGroup,
+  BlotBlock,
+  InlineGroup,
   ListGroup,
   ListItem,
-  BlotBlock,
-} from './grouper/group-types';
-export { DeltaInsertOp } from './DeltaInsertOp';
-export { InsertDataQuill, InsertDataCustom } from './InsertData';
+  VideoItem,
+} from './grouper/group-types.js';
+export { DeltaInsertOp } from './DeltaInsertOp.js';
+export { InsertDataQuill, InsertDataCustom } from './InsertData.js';
 export {
-  NewLine,
   ListType,
   ScriptType,
   DirectionType,
   AlignType,
   DataType,
   GroupType,
-} from './value-types';
+} from './value-types.js';

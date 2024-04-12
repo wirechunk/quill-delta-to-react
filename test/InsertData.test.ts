@@ -1,31 +1,27 @@
-import 'mocha';
-import * as assert from 'assert';
+import { describe, it } from 'vitest';
+import { strict as assert } from 'node:assert';
+import { InsertDataQuill, InsertDataCustom } from './../src/InsertData.js';
+import { DataType } from './../src/value-types.js';
 
-import { InsertDataQuill, InsertDataCustom } from './../src/InsertData';
-import { DataType } from './../src/value-types';
+describe('InsertDataQuill', () => {
+  describe('constructor', () => {
+    it('should instantiate', () => {
+      const t1 = new InsertDataQuill(DataType.Video, 'https://');
+      assert.equal(t1.type === DataType.Video, true);
+      assert.equal(t1.value === 'https://', true);
 
-describe('InsertData', function () {
-  describe('InsertDataQuill', function () {
-    describe('constructor()', function () {
-      it('should instantiate', function () {
-        var t = new InsertDataQuill(DataType.Video, 'https://');
-        assert.equal(t.type === 'video', true);
-        assert.equal(t.value === 'https://', true);
-
-        t = new InsertDataQuill(DataType.Text, 'hello');
-        assert.equal(t.type === 'text', true);
-        assert.equal(t.value === 'hello', true);
-      });
+      const t2 = new InsertDataQuill(DataType.Text, 'hello');
+      assert.equal(t2.type === DataType.Text, true);
+      assert.equal(t2.value === 'hello', true);
     });
   });
+});
 
-  describe('InsertDataCustom', function () {
-    describe('constructor()', function () {
-      it('should instantiate', function () {
-        var t = new InsertDataCustom('biu', {});
-        assert.equal(t.type === 'biu', true);
-        assert.deepEqual(t.value, {});
-      });
+describe('InsertDataCustom', () => {
+  describe('constructor', () => {
+    it('should instantiate', () => {
+      const instance = new InsertDataCustom({ yoyoyo: 1 });
+      assert.deepEqual(instance.value, { yoyoyo: 1 });
     });
   });
 });

@@ -1,73 +1,86 @@
-interface IArraySlice {
+export type ArraySlice<T> = {
   sliceStartsAt: number;
-  elements: any[];
-}
-
-function preferSecond(arr: any[]): any {
-  if (arr.length === 0) {
-    return null;
-  }
-  return arr.length >= 2 ? arr[1] : arr[0];
-}
-
-function flatten(arr: any[]): any[] {
-  return arr.reduce((pv: any[], v: any) => {
-    return pv.concat(Array.isArray(v) ? flatten(v) : v);
-  }, []);
-}
-
-function find(arr: any[], predicate: (currElm: any) => boolean) {
-  if (Array.prototype.find) {
-    return Array.prototype.find.call(arr, predicate);
-  }
-
-  for (var i = 0; i < arr.length; i++) {
-    if (predicate(arr[i])) return arr[i];
-  }
-
-  return undefined;
-}
+  elements: T[];
+};
 
 /**
- * Returns a new array by putting consecutive elements satisfying predicate into a new
- * array and returning others as they are.
+ * Returns a new array by putting consecutive elements that are instances of classType and satisfying
+ * predicate (if provided) into a new array and returning others as they are.
  * Ex: [1, "ha", 3, "ha", "ha"] => [1, "ha", 3, ["ha", "ha"]]
  *      where predicate: (v, vprev) => typeof v === typeof vPrev
  */
-function groupConsecutiveElementsWhile(
-  arr: any[],
-  predicate: (currElm: any, prevElm: any) => boolean
-): any[] {
-  var groups = [];
+export const groupConsecutiveSatisfyingClassElementsWhile = <T, GroupT>(
+  arr: T[],
+  classType: new (...args: never[]) => GroupT,
+  predicate?: (currElm: GroupT, prevElm: GroupT) => boolean,
+): Array<T | GroupT | [GroupT, ...GroupT[]]> => {
+  const groups: Array<T | GroupT | [GroupT, ...GroupT[]]> = [];
 
-  var currElm, currGroup;
-  for (var i = 0; i < arr.length; i++) {
-    currElm = arr[i];
-
-    if (i > 0 && predicate(currElm, arr[i - 1])) {
-      currGroup = groups[groups.length - 1];
-      currGroup.push(currElm);
+  for (let i = 0; i < arr.length; i++) {
+    const currElm = arr[i];
+    const prevElm: T | undefined = arr[i - 1];
+    if (
+      prevElm !== undefined &&
+      currElm instanceof classType &&
+      prevElm instanceof classType &&
+      (!predicate || predicate(currElm, prevElm))
+    ) {
+      const currGroup = groups[groups.length - 1];
+      if (Array.isArray(currGroup)) {
+        currGroup.push(currElm);
+      } else {
+        groups[groups.length - 1] = [prevElm, currElm];
+      }
     } else {
-      groups.push([currElm]);
+      groups.push(currElm);
     }
   }
-  return groups.map((g) => (g.length === 1 ? g[0] : g));
-}
+
+  return groups;
+};
+
+/**
+ * Returns a new array by putting consecutive elements satisfying predicate into a new array and
+ * returning others as they are.
+ */
+export const groupConsecutiveElementsWhile = <T>(
+  arr: T[],
+  predicate: (currElm: T, prevElm: T) => boolean,
+): Array<T | [T, ...T[]]> => {
+  const groups: Array<T | [T, ...T[]]> = [];
+
+  for (let i = 0; i < arr.length; i++) {
+    const currElm = arr[i];
+    const prevElm: T | undefined = arr[i - 1];
+    if (prevElm !== undefined && predicate(currElm, prevElm)) {
+      const currGroup = groups[groups.length - 1];
+      if (Array.isArray(currGroup)) {
+        currGroup.push(currElm);
+      } else {
+        groups[groups.length - 1] = [prevElm, currElm];
+      }
+    } else {
+      groups.push(currElm);
+    }
+  }
+
+  return groups;
+};
 
 /**
  * Returns consecutive list of elements satisfying the predicate starting from startIndex
  * and traversing the array in reverse order.
  */
-function sliceFromReverseWhile(
-  arr: any[],
+export function sliceFromReverseWhile<T>(
+  arr: T[],
   startIndex: number,
-  predicate: (currElm: any) => boolean
-): IArraySlice {
-  var result = {
-    elements: [] as any[],
+  predicate: (currElm: T) => boolean,
+): ArraySlice<T> {
+  const result: ArraySlice<T> = {
+    elements: [],
     sliceStartsAt: -1,
   };
-  for (var i = startIndex; i >= 0; i--) {
+  for (let i = startIndex; i >= 0; i--) {
     if (!predicate(arr[i])) {
       break;
     }
@@ -76,23 +89,3 @@ function sliceFromReverseWhile(
   }
   return result;
 }
-
-function intersperse(arr: any[], item: any): any[] {
-  return arr.reduce((pv: any[], v: any, index: number) => {
-    pv.push(v);
-    if (index < arr.length - 1) {
-      pv.push(item);
-    }
-    return pv;
-  }, []);
-}
-
-export {
-  IArraySlice,
-  preferSecond,
-  flatten,
-  groupConsecutiveElementsWhile,
-  sliceFromReverseWhile,
-  intersperse,
-  find,
-};

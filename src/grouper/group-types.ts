@@ -1,86 +1,55 @@
-import { DeltaInsertOp } from './../DeltaInsertOp';
+import { DeltaInsertOp } from './../DeltaInsertOp.js';
+import { InsertDataCustom, InsertDataQuill } from '../InsertData.js';
 
-class InlineGroup {
-  readonly ops: DeltaInsertOp[];
-  constructor(ops: DeltaInsertOp[]) {
-    this.ops = ops;
-  }
+export class InlineGroup {
+  constructor(readonly ops: DeltaInsertOp[]) {}
 }
 
-class SingleItem {
-  readonly op: DeltaInsertOp;
-  constructor(op: DeltaInsertOp) {
-    this.op = op;
-  }
-}
-class VideoItem extends SingleItem {}
-class BlotBlock extends SingleItem {}
-
-class BlockGroup {
-  readonly op: DeltaInsertOp;
-  ops: DeltaInsertOp[];
-  constructor(op: DeltaInsertOp, ops: DeltaInsertOp[]) {
-    this.op = op;
-    this.ops = ops;
-  }
+export class VideoItem {
+  constructor(readonly op: DeltaInsertOp<InsertDataQuill>) {}
 }
 
-class ListGroup {
-  items: ListItem[];
-  constructor(items: ListItem[]) {
-    this.items = items;
-  }
+export class BlotBlock {
+  constructor(readonly op: DeltaInsertOp<InsertDataCustom>) {}
 }
 
-class ListItem {
-  readonly item: BlockGroup;
-  innerList: ListGroup | null;
-  constructor(item: BlockGroup, innerList: ListGroup | null = null) {
-    this.item = item;
-    this.innerList = innerList;
-  }
+export class BlockGroup {
+  constructor(
+    readonly op: DeltaInsertOp,
+    readonly ops: DeltaInsertOp[],
+  ) {}
 }
 
-class TableGroup {
-  rows: TableRow[];
-  constructor(rows: TableRow[]) {
-    this.rows = rows;
-  }
+export class ListGroup {
+  constructor(readonly items: ListItem[]) {}
 }
 
-class TableRow {
-  cells: TableCell[];
-  constructor(cells: TableCell[]) {
-    this.cells = cells;
-  }
+export class ListItem {
+  constructor(
+    readonly item: BlockGroup,
+    readonly innerList: ListGroup | null = null,
+  ) {}
 }
 
-class TableCell {
-  readonly item: BlockGroup;
-  constructor(item: BlockGroup) {
-    this.item = item;
-  }
+export class TableGroup {
+  constructor(readonly rows: TableRow[]) {}
 }
 
-type TDataGroup =
+export class TableRow {
+  constructor(readonly cells: TableCell[]) {}
+}
+
+export class TableCell {
+  constructor(readonly item: BlockGroup) {}
+}
+
+export type TDataGroup =
   | VideoItem
   | InlineGroup
   | BlockGroup
+  | BlotBlock
   | ListItem
   | ListGroup
   | TableGroup
   | TableRow
   | TableCell;
-
-export {
-  VideoItem,
-  BlotBlock,
-  InlineGroup,
-  BlockGroup,
-  ListGroup,
-  ListItem,
-  TableGroup,
-  TableRow,
-  TableCell,
-  TDataGroup,
-};

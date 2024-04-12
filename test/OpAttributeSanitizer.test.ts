@@ -1,33 +1,63 @@
-import 'mocha';
-import * as assert from 'assert';
-
-import { OpAttributeSanitizer } from './../src/OpAttributeSanitizer';
-import { ListType, AlignType, DirectionType } from './../src/value-types';
+import { describe, it } from 'vitest';
+import { strict as assert } from 'node:assert';
+import {
+  OpAttributeSanitizer,
+  OpAttributeSanitizerOptions,
+} from './../src/OpAttributeSanitizer.js';
+import { ListType, AlignType, DirectionType } from './../src/value-types.js';
 
 describe('OpAttributeSanitizer', function () {
-  describe('#IsValidHexColor()', function () {
-    it('should return true if hex color is valid', function () {
-      assert.ok(OpAttributeSanitizer.IsValidHexColor('#234'));
-      assert.ok(OpAttributeSanitizer.IsValidHexColor('#f23'));
-      assert.ok(OpAttributeSanitizer.IsValidHexColor('#fFe234'));
-      assert.equal(OpAttributeSanitizer.IsValidHexColor('#g34'), false);
+  describe('isValidHexColor', function () {
+    it('should return true for valid HEX colors', () => {
+      assert.ok(OpAttributeSanitizer.isValidHexColor('#234'));
+      assert.ok(OpAttributeSanitizer.isValidHexColor('#f23'));
+      assert.ok(OpAttributeSanitizer.isValidHexColor('#fFe234'));
+      assert.equal(OpAttributeSanitizer.isValidHexColor('#g34'), false);
+    });
 
-      assert.equal(OpAttributeSanitizer.IsValidHexColor('e34'), false);
-      assert.equal(OpAttributeSanitizer.IsValidHexColor('123434'), false);
+    it('should return false for invalid strings', () => {
+      assert.equal(OpAttributeSanitizer.isValidHexColor('e34'), false);
+      assert.equal(OpAttributeSanitizer.isValidHexColor('123434'), false);
     });
   });
 
-  describe('#IsValidFontName()', function () {
-    it('should return true if font name is valid', function () {
-      assert.ok(OpAttributeSanitizer.IsValidFontName('gooD-ol times 2'));
-      assert.equal(OpAttributeSanitizer.IsValidHexColor('bad"times?'), false);
+  describe('isValidFontName', () => {
+    it('should return true for valid font names', () => {
+      assert.equal(
+        OpAttributeSanitizer.isValidFontName('gooD-ol times 2'),
+        true,
+      );
+    });
+
+    it('should return false for invalid strings', () => {
+      assert.equal(OpAttributeSanitizer.isValidFontName(''), false);
+      assert.equal(OpAttributeSanitizer.isValidHexColor('bad"str?'), false);
     });
   });
 
-  describe('#IsValidSize()', function () {
-    it('should return true if size is valid', function () {
-      assert.ok(OpAttributeSanitizer.IsValidSize('bigfaT-size'));
-      assert.equal(OpAttributeSanitizer.IsValidSize('small.sizetimes?'), false);
+  describe('isValidSize', () => {
+    it('should return true for valid sizes', function () {
+      assert.ok(OpAttributeSanitizer.isValidSize('bigfaT-size'));
+    });
+
+    it('should return false for invalid strings', () => {
+      assert.equal(OpAttributeSanitizer.isValidSize(''), false);
+      assert.equal(OpAttributeSanitizer.isValidSize('big-fat-size!'), false);
+      assert.equal(OpAttributeSanitizer.isValidSize('small.size?'), false);
+    });
+  });
+
+  describe('isValidTarget', () => {
+    it('should return true for valid targets', () => {
+      ['_self', '_blank', '_parent', '_top'].forEach((target) => {
+        assert.ok(OpAttributeSanitizer.isValidTarget(target));
+      });
+    });
+
+    it('should return false for invalid strings', () => {
+      assert.equal(OpAttributeSanitizer.isValidTarget('<'), false);
+      assert.equal(OpAttributeSanitizer.isValidTarget('~'), false);
+      assert.equal(OpAttributeSanitizer.isValidTarget('_blank+'), false);
     });
   });
 
@@ -53,7 +83,7 @@ describe('OpAttributeSanitizer', function () {
       assert.equal(OpAttributeSanitizer.IsValidColorLiteral('red1'), false);
       assert.equal(
         OpAttributeSanitizer.IsValidColorLiteral('red-green'),
-        false
+        false,
       );
       assert.equal(OpAttributeSanitizer.IsValidColorLiteral(''), false);
     });
@@ -70,11 +100,11 @@ describe('OpAttributeSanitizer', function () {
       assert.equal(OpAttributeSanitizer.IsValidRGBColor('rgb(260,0,0)'), false);
       assert.equal(
         OpAttributeSanitizer.IsValidRGBColor('rgb(2000,0,0)'),
-        false
+        false,
       );
     });
   });
-  describe('#IsValidRel()', function () {
+  describe('IsValidRel', function () {
     it('should return true if rel is valid', function () {
       assert.ok(OpAttributeSanitizer.IsValidRel('nofollow'));
       assert.ok(OpAttributeSanitizer.IsValidRel('tag'));
@@ -84,7 +114,7 @@ describe('OpAttributeSanitizer', function () {
       assert.equal(OpAttributeSanitizer.IsValidRel(''), false);
     });
   });
-  describe('#IsValidLang()', function () {
+  describe('IsValidLang', function () {
     it('should return true if lang is valid', function () {
       assert.ok(OpAttributeSanitizer.IsValidLang('javascript'));
       assert.ok(OpAttributeSanitizer.IsValidLang(true));
@@ -95,49 +125,25 @@ describe('OpAttributeSanitizer', function () {
     });
   });
 
-  describe('#sanitize()', function () {
-    it('should return empty object', function () {
-      [null, 3, undefined, 'fd'].forEach((v) => {
-        assert.deepEqual(OpAttributeSanitizer.sanitize(<any>v, {}), {});
-      });
-    });
-
-    var attrs = {
-      bold: 'nonboolval',
-      color: '#12345H',
-      background: '#333',
-      font: 'times new roman',
-      size: 'x.large',
-      link: 'http://<',
-      script: 'supper',
-      list: ListType.Ordered,
-      header: '3',
-      indent: 40,
-      direction: DirectionType.Rtl,
-      align: AlignType.Center,
-      width: '3',
-      customAttr1: 'shouldnt be touched',
-      mentions: true,
-      mention: {
-        class: 'A-cls-9',
-        id: 'An-id_9:.',
-        target: '_blank',
-        avatar: 'http://www.yahoo.com',
-        'end-point': 'http://abc.com',
-        slug: 'my-name',
-      },
+  describe('sanitize', () => {
+    const noopSanitizeOptions: OpAttributeSanitizerOptions = {
+      urlSanitizer: (url) => url,
     };
-    it('should return sanitized attributes', function () {
-      assert.deepEqual(OpAttributeSanitizer.sanitize(<any>attrs, {}), {
-        bold: true,
+
+    it('should return sanitized attributes', () => {
+      const attrs = {
+        bold: 'nonboolval',
+        color: '#12345H',
         background: '#333',
         font: 'times new roman',
-        link: 'http://&lt;',
-        list: 'ordered',
-        header: 3,
-        indent: 30,
-        direction: 'rtl',
-        align: 'center',
+        size: 'x.large',
+        link: 'http://<',
+        script: 'supper',
+        list: ListType.Ordered,
+        header: '3',
+        indent: 40,
+        direction: DirectionType.Rtl,
+        align: AlignType.Center,
         width: '3',
         customAttr1: 'shouldnt be touched',
         mentions: true,
@@ -146,43 +152,106 @@ describe('OpAttributeSanitizer', function () {
           id: 'An-id_9:.',
           target: '_blank',
           avatar: 'http://www.yahoo.com',
-          'end-point': 'http://abc.com',
           slug: 'my-name',
         },
-      });
+      };
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize(attrs, noopSanitizeOptions),
+        {
+          bold: true,
+          background: '#333',
+          font: 'times new roman',
+          link: 'http://<',
+          list: 'ordered',
+          header: 3,
+          indent: 30,
+          direction: 'rtl',
+          align: 'center',
+          width: '3',
+          customAttr1: 'shouldnt be touched',
+          mentions: true,
+          mention: {
+            class: 'A-cls-9',
+            id: 'An-id_9:.',
+            target: '_blank',
+            avatar: 'http://www.yahoo.com',
+            slug: 'my-name',
+          },
+        },
+      );
+    });
 
+    it('should sanitize mentions', () => {
       assert.deepEqual(
         OpAttributeSanitizer.sanitize(
-          <any>{
+          {
             mentions: true,
             mention: 1,
           },
-          {}
+          noopSanitizeOptions,
         ),
-        {}
+        {
+          mentions: true,
+          mention: {},
+        },
       );
+    });
 
-      assert.deepEqual(OpAttributeSanitizer.sanitize({ header: 1 }, {}), {
-        header: 1,
-      });
+    it('should keep a valid header value of 1', () => {
       assert.deepEqual(
-        OpAttributeSanitizer.sanitize({ header: undefined }, {}),
-        {}
+        OpAttributeSanitizer.sanitize({ header: 1 }, noopSanitizeOptions),
+        {
+          header: 1,
+        },
       );
-      assert.deepEqual(OpAttributeSanitizer.sanitize({ header: 100 }, {}), {
-        header: 6,
-      });
+    });
+
+    it('should exclude an undefined header value', () => {
       assert.deepEqual(
-        OpAttributeSanitizer.sanitize({ align: AlignType.Center }, {}),
-        { align: 'center' }
+        OpAttributeSanitizer.sanitize(
+          { header: undefined },
+          noopSanitizeOptions,
+        ),
+        {},
       );
+    });
+
+    it('should clamp a header value to 6', () => {
       assert.deepEqual(
-        OpAttributeSanitizer.sanitize({ direction: DirectionType.Rtl }, {}),
-        { direction: 'rtl' }
+        OpAttributeSanitizer.sanitize({ header: 100 }, noopSanitizeOptions),
+        {
+          header: 6,
+        },
       );
-      assert.deepEqual(OpAttributeSanitizer.sanitize({ indent: 2 }, {}), {
-        indent: 2,
-      });
+    });
+
+    it('should keep a valid align value', () => {
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize(
+          { align: AlignType.Center },
+          noopSanitizeOptions,
+        ),
+        { align: 'center' },
+      );
+    });
+
+    it('should keep a valid direction value', () => {
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize(
+          { direction: DirectionType.Rtl },
+          noopSanitizeOptions,
+        ),
+        { direction: 'rtl' },
+      );
+    });
+
+    it('should keep a valid indent value', () => {
+      assert.deepEqual(
+        OpAttributeSanitizer.sanitize({ indent: 2 }, noopSanitizeOptions),
+        {
+          indent: 2,
+        },
+      );
     });
   });
 });

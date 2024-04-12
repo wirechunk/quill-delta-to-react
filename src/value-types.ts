@@ -1,50 +1,37 @@
-type NewLine = '\n';
-const NewLine = '\n' as NewLine;
-
-enum ListType {
+export enum ListType {
   Ordered = 'ordered',
   Bullet = 'bullet',
   Checked = 'checked',
   Unchecked = 'unchecked',
 }
 
-enum ScriptType {
+export enum ScriptType {
   Sub = 'sub',
   Super = 'super',
 }
 
-enum DirectionType {
+export enum DirectionType {
   Rtl = 'rtl',
 }
 
-enum AlignType {
+export enum AlignType {
   Left = 'left',
   Center = 'center',
   Right = 'right',
   Justify = 'justify',
 }
 
-enum DataType {
+export enum DataType {
   Image = 'image',
   Video = 'video',
   Formula = 'formula',
   Text = 'text',
 }
 
-enum GroupType {
+export enum GroupType {
   Block = 'block',
   InlineGroup = 'inline-group',
   List = 'list',
   Video = 'video',
   Table = 'table',
 }
-
-export {
-  NewLine,
-  ListType,
-  ScriptType,
-  DirectionType,
-  AlignType,
-  DataType,
-  GroupType,
-};

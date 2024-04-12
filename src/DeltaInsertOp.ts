@@ -1,22 +1,16 @@
-import { NewLine, ListType, DataType } from './value-types';
-import { IOpAttributes } from './OpAttributeSanitizer';
-import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData';
+import { DataType, ListType } from './value-types.js';
+import type { OpAttributes } from './OpAttributeSanitizer.js';
+import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import isEqual from 'lodash.isequal';
 
-class DeltaInsertOp {
-  readonly insert: InsertData;
-  readonly attributes: IOpAttributes;
-
-  constructor(insertVal: InsertData | string, attrs?: IOpAttributes) {
-    if (typeof insertVal === 'string') {
-      insertVal = new InsertDataQuill(DataType.Text, insertVal + '');
-    }
-    this.insert = insertVal;
-    this.attributes = attrs || {};
-  }
+export class DeltaInsertOp<Insert extends InsertData = InsertData> {
+  constructor(
+    readonly insert: Insert,
+    readonly attributes: OpAttributes = {},
+  ) {}
 
   static createNewLineOp() {
-    return new DeltaInsertOp(NewLine);
+    return new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'));
   }
 
   isContainerBlock() {
@@ -26,14 +20,16 @@ class DeltaInsertOp {
       this.isTable() ||
       this.isCodeBlock() ||
       this.isHeader() ||
-      this.isBlockAttribute() ||
-      this.isCustomTextBlock()
+      this.hasBlockAttribute()
     );
   }
 
-  isBlockAttribute() {
-    const attrs = this.attributes;
-    return !!(attrs.align || attrs.direction || attrs.indent);
+  hasBlockAttribute() {
+    return (
+      !!this.attributes.align ||
+      !!this.attributes.direction ||
+      !!this.attributes.indent
+    );
   }
 
   isBlockquote(): boolean {
@@ -48,19 +44,6 @@ class DeltaInsertOp {
     return !!this.attributes.table;
   }
 
-  isSameHeaderAs(op: DeltaInsertOp): boolean {
-    return op.attributes.header === this.attributes.header && this.isHeader();
-  }
-
-  // adi: alignment direction indentation
-  hasSameAdiAs(op: DeltaInsertOp) {
-    return (
-      this.attributes.align === op.attributes.align &&
-      this.attributes.direction === op.attributes.direction &&
-      this.attributes.indent === op.attributes.indent
-    );
-  }
-
   hasSameIndentationAs(op: DeltaInsertOp) {
     return this.attributes.indent === op.attributes.indent;
   }
@@ -69,18 +52,12 @@ class DeltaInsertOp {
     return isEqual(this.attributes, op.attributes);
   }
 
-  hasHigherIndentThan(op: DeltaInsertOp) {
-    return (
-      (Number(this.attributes.indent) || 0) >
-      (Number(op.attributes.indent) || 0)
-    );
-  }
-
   isInline() {
-    return !(
-      this.isContainerBlock() ||
-      this.isVideo() ||
-      this.isCustomEmbedBlock()
+    return (
+      !this.isContainerBlock() &&
+      (this.insert instanceof InsertDataQuill
+        ? this.insert.type !== DataType.Video
+        : !this.attributes.renderAsBlock)
     );
   }
 
@@ -93,7 +70,7 @@ class DeltaInsertOp {
   }
 
   isJustNewline() {
-    return this.insert.value === NewLine;
+    return this.insert.value === '\n';
   }
 
   isList() {
@@ -136,49 +113,48 @@ class DeltaInsertOp {
     );
   }
 
-  isSameTableRowAs(op: DeltaInsertOp): boolean {
+  isImage(): this is DeltaInsertOp<InsertDataQuill<DataType.Image>> {
     return (
-      !!op.isTable() &&
-      this.isTable() &&
-      this.attributes.table === op.attributes.table
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Image
     );
   }
 
-  isText() {
-    return this.insert.type === DataType.Text;
+  isFormula(): this is DeltaInsertOp<InsertDataQuill<DataType.Formula>> {
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Formula
+    );
   }
 
-  isImage() {
-    return this.insert.type === DataType.Image;
-  }
-
-  isFormula() {
-    return this.insert.type === DataType.Formula;
-  }
-
-  isVideo() {
-    return this.insert.type === DataType.Video;
+  isVideo(): this is DeltaInsertOp<InsertDataQuill<DataType.Video>> {
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Video
+    );
   }
 
   isLink() {
-    return this.isText() && !!this.attributes.link;
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Text &&
+      !!this.attributes.link
+    );
   }
 
-  isCustomEmbed() {
+  isCustomEmbed(): this is DeltaInsertOp<InsertDataCustom> {
     return this.insert instanceof InsertDataCustom;
   }
 
-  isCustomEmbedBlock() {
+  isCustomEmbedBlock(): this is DeltaInsertOp<InsertDataCustom> {
     return this.isCustomEmbed() && !!this.attributes.renderAsBlock;
   }
 
-  isCustomTextBlock() {
-    return this.isText() && !!this.attributes.renderAsBlock;
-  }
-
-  isMentions() {
-    return this.isText() && !!this.attributes.mentions;
+  isMentions(): this is DeltaInsertOp<InsertDataQuill<DataType.Text>> {
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Text &&
+      !!this.attributes.mentions
+    );
   }
 }
-
-export { DeltaInsertOp };
