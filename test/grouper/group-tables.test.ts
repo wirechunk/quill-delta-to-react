@@ -14,7 +14,7 @@ import { DataType } from '../../src/value-types.js';
 
 describe('TableGrouper', function () {
   describe('empty table', function () {
-    var ops = [
+    const ops = [
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         table: 'row-1',
       }),
@@ -46,8 +46,8 @@ describe('TableGrouper', function () {
 
     it('should return table with 3 rows and 3 cells', function () {
       const groups = pairOpsWithTheirBlock(ops);
-      var act = groupTables(groups);
-      var exp = [
+      const act = groupTables(groups);
+      const exp = [
         new TableGroup([
           new TableRow([
             new TableCell(<BlockGroup>groups[0]),
@@ -72,7 +72,7 @@ describe('TableGrouper', function () {
   });
 
   describe('single 1 row table', function () {
-    var ops = [
+    const ops = [
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'cell1')),
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         table: 'row-1',
@@ -85,8 +85,8 @@ describe('TableGrouper', function () {
 
     it('should return table with 1 row', function () {
       const groups = pairOpsWithTheirBlock(ops);
-      var act = groupTables(groups);
-      var exp = [
+      const act = groupTables(groups);
+      const exp = [
         new TableGroup([
           new TableRow([
             new TableCell(<BlockGroup>groups[0]),
@@ -100,7 +100,7 @@ describe('TableGrouper', function () {
   });
 
   describe('single 1 col table', function () {
-    var ops = [
+    const ops = [
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'cell1')),
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         table: 'row-1',
@@ -113,8 +113,8 @@ describe('TableGrouper', function () {
 
     it('should return table with 1 col', function () {
       const groups = pairOpsWithTheirBlock(ops);
-      var act = groupTables(groups);
-      var exp = [
+      const act = groupTables(groups);
+      const exp = [
         new TableGroup([
           new TableRow([new TableCell(<BlockGroup>groups[0])]),
           new TableRow([new TableCell(<BlockGroup>groups[1])]),

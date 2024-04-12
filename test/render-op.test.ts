@@ -192,7 +192,7 @@ describe('RenderOp', () => {
 
     it('should ignore an invalid direction', () => {
       const op = new DeltaInsertOp(new InsertDataQuill(DataType.Image, ''), {
-        // @ts-expect-error
+        // @ts-expect-error -- Notice this is 'ltr' instead of DirectionType.Rtl.
         direction: 'ltr',
       });
       const ro = new RenderOp(op);

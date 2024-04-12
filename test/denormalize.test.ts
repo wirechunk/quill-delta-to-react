@@ -36,7 +36,7 @@ describe('denormalizeInsertOp', () => {
 
 describe('tokenizeWithNewLines', function () {
   it('should split and return an array of strings ', () => {
-    var act = '';
+    let act = '';
     assert.deepEqual(tokenizeWithNewLines(act), ['']);
 
     act = '\n';

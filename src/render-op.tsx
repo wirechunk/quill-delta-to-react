@@ -108,7 +108,7 @@ export type DataAttributes = {
   [key: `data-${string}`]: unknown;
 };
 
-export type HTMLAttributes = ReactHTMLAttributes<{}> & DataAttributes;
+export type HTMLAttributes = ReactHTMLAttributes<object> & DataAttributes;
 
 export type OpToNodeConverterOptions = {
   classPrefix?: string;

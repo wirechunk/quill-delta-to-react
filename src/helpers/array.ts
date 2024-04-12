@@ -11,7 +11,7 @@ export type ArraySlice<T> = {
  */
 export const groupConsecutiveSatisfyingClassElementsWhile = <T, GroupT>(
   arr: T[],
-  classType: new (...args: any[]) => GroupT,
+  classType: new (...args: never[]) => GroupT,
   predicate?: (currElm: GroupT, prevElm: GroupT) => boolean,
 ): Array<T | GroupT | [GroupT, ...GroupT[]]> => {
   const groups: Array<T | GroupT | [GroupT, ...GroupT[]]> = [];

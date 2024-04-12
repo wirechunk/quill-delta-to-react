@@ -7,8 +7,8 @@ import { DataType, ListType } from '../src/value-types.js';
 describe('DeltaInsertOp', () => {
   describe('constructor', function () {
     it('should instantiate', function () {
-      var embed = new InsertDataQuill(DataType.Image, 'https://');
-      var t = new DeltaInsertOp(embed);
+      const embed = new InsertDataQuill(DataType.Image, 'https://');
+      const t = new DeltaInsertOp(embed);
       assert.equal(t instanceof DeltaInsertOp, true);
       assert.equal(t.insert instanceof InsertDataQuill, true);
       assert.equal(t.attributes instanceof Object, true);
@@ -42,14 +42,17 @@ describe('DeltaInsertOp', () => {
 
   describe('isInline', function () {
     it('should return true if op is an inline', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
+      const op = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, '\n'),
+        {},
+      );
       assert.equal(op.isInline(), true);
     });
   });
 
   describe('isJustNewline()', function () {
     it('should return true if op is a list', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
+      let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
       assert.equal(op.isJustNewline(), true);
 
       op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n\n '), {
@@ -61,7 +64,7 @@ describe('DeltaInsertOp', () => {
 
   describe('isList()', function () {
     it('should return true if op is a list', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
+      let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
       assert.equal(op.isList(), false);
 
       op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'fds '), {
@@ -78,7 +81,7 @@ describe('DeltaInsertOp', () => {
 
   describe('isBulletList()', function () {
     it('should return true if op is a bullet list', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+      let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Bullet,
       });
       assert.equal(op.isBulletList(), true);
@@ -92,7 +95,7 @@ describe('DeltaInsertOp', () => {
 
   describe('isOrderedList()', function () {
     it('should return true if op is an ordered list', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+      let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Bullet,
       });
       assert.equal(op.isOrderedList(), false);
@@ -106,7 +109,7 @@ describe('DeltaInsertOp', () => {
 
   describe('isCheckedList', function () {
     it('should return true if op is an checked list', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+      let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Unchecked,
       });
       assert.equal(op.isCheckedList(), false);
@@ -120,7 +123,7 @@ describe('DeltaInsertOp', () => {
 
   describe('isUncheckedList', function () {
     it('should return true if op is an unchecked list', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+      let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Bullet,
       });
       assert.equal(op.isUncheckedList(), false);
@@ -134,17 +137,20 @@ describe('DeltaInsertOp', () => {
 
   describe('isSameListAs', function () {
     it('should return true if op list type same as the comparison', function () {
-      var op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
+      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Bullet,
       });
-      var op2 = new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'ds'), {
+      const op2 = new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'ds'), {
         list: ListType.Bullet,
       });
       assert.equal(op.isSameListAs(op2), true);
 
-      var op3 = new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'fds '), {
-        list: ListType.Ordered,
-      });
+      const op3 = new DeltaInsertOp(
+        new InsertDataQuill(DataType.Text, 'fds '),
+        {
+          list: ListType.Ordered,
+        },
+      );
       assert.equal(op.isSameListAs(op3), false);
     });
   });

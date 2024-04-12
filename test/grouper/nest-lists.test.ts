@@ -14,7 +14,7 @@ import { InsertDataQuill } from '../../src/InsertData.js';
 
 describe('nestLists', function () {
   it('should not nest different types of lists', function () {
-    var ops = [
+    const ops = [
       new DeltaInsertOp(
         new InsertDataQuill(DataType.Text, 'ordered list 1 item 1'),
       ),
@@ -47,7 +47,7 @@ describe('nestLists', function () {
     ];
 
     const groups = pairOpsWithTheirBlock(ops);
-    var act = nestLists(groups);
+    const act = nestLists(groups);
 
     assert.deepEqual(act, [
       new ListGroup([new ListItem(<BlockGroup>groups[0])]),
@@ -119,7 +119,7 @@ describe('nestLists', function () {
   });
 
   it('should nest if lists are same and later ones have higher indent', function () {
-    var ops = [
+    const ops = [
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'item 1')),
       new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Ordered,

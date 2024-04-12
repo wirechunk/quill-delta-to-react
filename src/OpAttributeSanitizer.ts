@@ -48,7 +48,7 @@ export type OpAttributeSanitizerOptions = {
 
 const validFontNameRegex = /^[a-z0-9 -]{1,50}$/i;
 
-const validRelRegex = /^[a-z\s\-]{1,250}$/i;
+const validRelRegex = /^[a-z\s-]{1,250}$/i;
 
 const validTargetRegex = /^[\w-]{1,50}$/i;
 
@@ -249,7 +249,7 @@ export class OpAttributeSanitizer {
   }
 
   static isValidSize(size: string) {
-    return !!size.match(/^[a-z0-9\-]{1,20}$/i);
+    return !!size.match(/^[a-z0-9-]{1,20}$/i);
   }
 
   static IsValidWidth(width: string) {
@@ -268,6 +268,6 @@ export class OpAttributeSanitizer {
     if (typeof lang === 'boolean') {
       return true;
     }
-    return !!lang.match(/^[a-zA-Z\s\-\\\/\+]{1,50}$/i);
+    return !!lang.match(/^[a-z\s\-\\/+]{1,50}$/i);
   }
 }

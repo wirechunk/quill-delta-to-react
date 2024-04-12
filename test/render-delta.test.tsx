@@ -386,7 +386,7 @@ describe('RenderDelta', () => {
     });
 
     it('should create checked/unchecked lists', function () {
-      var ops4 = [
+      const ops4 = [
         { insert: 'hello' },
         { insert: '\n', attributes: { list: 'checked' } },
         { insert: 'there' },
@@ -546,7 +546,7 @@ describe('RenderDelta', () => {
 
       it('should render the target attribute when linkTarget is an empty string', () => {
         const rd = new RenderDelta({ ops, options: { linkTarget: '' } });
-        let html = renderToStaticMarkup(rd.render());
+        const html = renderToStaticMarkup(rd.render());
         assert.equal(
           html,
           '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#">C</a></p>',
@@ -597,7 +597,7 @@ describe('RenderDelta', () => {
       });
 
       it('should render singe cell table', () => {
-        let ops = [
+        const ops = [
           {
             insert: 'cell',
           },
@@ -621,7 +621,7 @@ describe('RenderDelta', () => {
       });
 
       it('should render filled table', () => {
-        let ops = [
+        const ops = [
           {
             insert: '11',
           },
@@ -775,7 +775,7 @@ describe('RenderDelta', () => {
 
       it('should correctly render code block', () => {
         const rd = new RenderDelta({ ops });
-        let html = renderToStaticMarkup(rd.render());
+        const html = renderToStaticMarkup(rd.render());
         assert.equal(
           html,
           `<pre>line 1\nline 2</pre><pre data-language="javascript">line 3</pre><pre>${encodeHtml(

@@ -9,16 +9,19 @@
     "lodash.isequal": "^4.5.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@types/lodash.isequal": "^4.5.8",
     "@types/node": "^20.12.5",
     "@types/quill": "^2.0.14",
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.24",
+    "eslint": "^8.57.0",
     "husky": "^9.0.11",
     "prettier": "^3.2.5",
     "pretty-quick": "^4.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.4",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^7.6.0",
     "vitest": "^1.4.0"
   },
   "peerDependencies": {
@@ -29,6 +32,8 @@
     "build": "./node_modules/typescript/bin/tsc",
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
+    "lint": "npx eslint --fix .",
+    "lint:check": "npx eslint .",
     "typecheck": "./node_modules/typescript/bin/tsc --project ./tsconfig.test.json --noEmit",
     "test": "vitest run"
   },

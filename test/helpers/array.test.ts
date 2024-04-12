@@ -4,8 +4,8 @@ import { groupConsecutiveElementsWhile } from '../../src/helpers/array.js';
 
 describe('groupConsecutiveElementsWhile', () => {
   it('should move consecutive elements matching predicate into an array (1)', () => {
-    var arr = [1, 'ha', 3, 'ha', 'ha'];
-    var grp = groupConsecutiveElementsWhile(
+    const arr = [1, 'ha', 3, 'ha', 'ha'];
+    const grp = groupConsecutiveElementsWhile(
       arr,
       (v, prev) => typeof v === typeof prev,
     );
