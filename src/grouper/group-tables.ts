@@ -13,10 +13,7 @@ import {
 const convertTableBlocksToTableRows = (items: BlockGroup[]): TableRow[] =>
   groupConsecutiveElementsWhile(
     items,
-    (g, gPrev) =>
-      g.op.isTable() &&
-      gPrev.op.isTable() &&
-      g.op.attributes.table === gPrev.op.attributes.table,
+    (g, gPrev) => g.op.attributes.table === gPrev.op.attributes.table,
   ).map(
     (item) =>
       new TableRow(
@@ -27,7 +24,7 @@ const convertTableBlocksToTableRows = (items: BlockGroup[]): TableRow[] =>
   );
 
 export const groupTables = (groups: TDataGroup[]): TDataGroup[] =>
-  groupConsecutiveSatisfyingClassElementsWhile(
+  groupConsecutiveSatisfyingClassElementsWhile<TDataGroup, BlockGroup>(
     groups,
     BlockGroup,
     (g, gPrev) => g.op.isTable() && gPrev.op.isTable(),

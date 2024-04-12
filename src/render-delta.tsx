@@ -229,11 +229,11 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     return (
       <table>
         <tbody>
-          <tr>
-            {table.rows.map((row) =>
-              row.cells.map((cell) => this.renderTableCell(cell)),
-            )}
-          </tr>
+          {table.rows.map((row, i) => (
+            <tr key={i}>
+              {row.cells.map((cell) => this.renderTableCell(cell))}
+            </tr>
+          ))}
         </tbody>
       </table>
     );
