@@ -5,6 +5,9 @@
   "type": "module",
   "main": "./dist/main.js",
   "types": "./dist/main.d.ts",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "lodash.isequal": "^4.5.0"
   },

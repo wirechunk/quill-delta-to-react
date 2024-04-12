@@ -15,5 +15,4 @@ export {
   DirectionType,
   AlignType,
   DataType,
-  GroupType,
 } from './value-types.js';

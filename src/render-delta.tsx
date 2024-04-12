@@ -1,7 +1,8 @@
 import {
   InlineStyles,
-  OpToNodeConverterOptions,
   RenderOp,
+  RenderOpOptions,
+  renderOpOptionsDefault,
 } from './render-op.js';
 import { DeltaInsertOp } from './DeltaInsertOp.js';
 import {
@@ -32,7 +33,7 @@ import { InsertDataCustom, InsertDataQuill } from './InsertData.js';
 import { DataType } from './value-types.js';
 
 export type RenderDeltaOptions = OpAttributeSanitizerOptions &
-  OpToNodeConverterOptions & {
+  RenderOpOptions & {
     orderedListTag: keyof JSX.IntrinsicElements;
     bulletListTag: keyof JSX.IntrinsicElements;
     multiLineBlockquote: boolean;
@@ -47,18 +48,26 @@ export type CustomRenderer = (
 
 export type RenderDeltaProps = {
   ops: unknown[];
-  options?: Partial<RenderDeltaOptions>;
-  customRenderer?: CustomRenderer;
+  options?: Partial<RenderDeltaOptions> | null;
+  customRenderer?: CustomRenderer | null;
 };
 
 export type RenderDeltaState = {
   options: RenderDeltaOptions;
-  converterOptions: OpToNodeConverterOptions;
 };
 
 export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
   constructor(props: RenderDeltaProps) {
     super(props);
+
+    let inlineStyles: boolean | Partial<InlineStyles> = false;
+    if (props.options?.inlineStyles) {
+      if (typeof props.options.inlineStyles === 'object') {
+        inlineStyles = props.options.inlineStyles;
+      } else {
+        inlineStyles = {};
+      }
+    }
 
     const options: RenderDeltaOptions = {
       orderedListTag: 'ol',
@@ -66,83 +75,74 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
       multiLineBlockquote: true,
       multiLineHeader: true,
       multiLineCodeBlock: true,
-      classPrefix: 'ql',
-      inlineStyles: false,
-      listItemTag: 'li',
-      paragraphTag: 'p',
-      linkTarget: '_blank',
-      allowBackgroundClasses: false,
       urlSanitizer: (url) => url,
+      ...renderOpOptionsDefault,
       ...props.options,
-    };
-
-    let inlineStyles: Partial<InlineStyles> | undefined;
-    if (options.inlineStyles) {
-      if (typeof options.inlineStyles === 'object') {
-        inlineStyles = options.inlineStyles;
-      } else {
-        inlineStyles = {};
-      }
-    }
-
-    const converterOptions: OpToNodeConverterOptions = {
-      classPrefix: options.classPrefix,
       inlineStyles,
-      listItemTag: options.listItemTag,
-      mentionTag: options.mentionTag,
-      paragraphTag: options.paragraphTag,
-      linkRel: options.linkRel,
-      linkTarget: options.linkTarget,
-      allowBackgroundClasses: options.allowBackgroundClasses,
-      customTag: options.customTag,
-      customAttributes: options.customAttributes,
-      customClasses: options.customClasses,
-      customCssStyles: options.customCssStyles,
     };
 
     this.state = {
       options,
-      converterOptions,
     };
   }
 
   render(): ReactNode {
-    return this.getGroupedOps().map((group) => {
+    return this.getGroupedOps().map((group, i) => {
       if (group instanceof ListGroup) {
-        return this.renderList(group);
+        return (
+          <RenderDelta.list
+            key={i}
+            list={group}
+            options={this.state.options}
+            customRenderer={this.props.customRenderer}
+          />
+        );
       }
       if (group instanceof TableGroup) {
-        return this.renderTable(group);
+        return (
+          <RenderDelta.table
+            key={i}
+            tableOp={group}
+            options={this.state.options}
+            customRenderer={this.props.customRenderer}
+          />
+        );
       }
       if (group instanceof BlockGroup) {
-        return this.renderBlock(group.op, group.ops);
+        return (
+          <RenderDelta.block
+            key={i}
+            blockOp={group.op}
+            ops={group.ops}
+            options={this.state.options}
+            customRenderer={this.props.customRenderer}
+          />
+        );
       }
       if (group instanceof BlotBlock) {
-        return this.renderCustom(group.op, null);
+        return (
+          <RenderDelta.custom
+            key={i}
+            op={group.op}
+            contextOp={null}
+            customRenderer={this.props.customRenderer}
+          />
+        );
       }
       if (group instanceof VideoItem) {
-        return this.renderVideo(group.op);
+        return <RenderDelta.video op={group.op} options={this.state.options} />;
       }
-      const Tag = this.state.options.paragraphTag || 'p';
-      const inlines = this.renderInlines((group as InlineGroup).ops);
+      const Tag = this.state.options.paragraphTag;
       return (
-        <Tag>
-          {inlines.map((node, i) => (
-            <Fragment key={i}>{node}</Fragment>
-          ))}
+        <Tag key={i}>
+          <RenderDelta.inlines
+            ops={(group as InlineGroup).ops}
+            options={this.state.options}
+            customRenderer={this.props.customRenderer}
+          />
         </Tag>
       );
     });
-  }
-
-  getListTag(op: DeltaInsertOp): keyof JSX.IntrinsicElements {
-    return op.isOrderedList()
-      ? this.state.options.orderedListTag
-      : op.isBulletList()
-        ? this.state.options.bulletListTag
-        : op.isCheckedList()
-          ? this.state.options.bulletListTag
-          : this.state.options.bulletListTag;
   }
 
   getGroupedOps(): TDataGroup[] {
@@ -209,29 +209,94 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     return nestLists(groupTables(groupedOps));
   }
 
-  private renderList(list: ListGroup): ReactNode {
-    const Tag = this.getListTag(list.items[0].item.op);
-    return <Tag>{list.items.map((li) => this.renderListItem(li))}</Tag>;
+  private static getListTag(
+    op: DeltaInsertOp,
+    options: RenderDeltaOptions,
+  ): keyof JSX.IntrinsicElements {
+    return op.isOrderedList()
+      ? options.orderedListTag
+      : op.isBulletList()
+        ? options.bulletListTag
+        : op.isCheckedList()
+          ? options.bulletListTag
+          : options.bulletListTag;
   }
 
-  renderListItem(li: ListItem): ReactNode {
+  private static list({
+    list,
+    options,
+    customRenderer,
+  }: {
+    list: ListGroup;
+    options: RenderDeltaOptions;
+    customRenderer: CustomRenderer | null | undefined;
+  }): ReactNode {
+    const Tag = RenderDelta.getListTag(list.items[0].item.op, options);
+    return (
+      <Tag>
+        {list.items.map((li, i) => (
+          <RenderDelta.listItem
+            key={i}
+            li={li}
+            options={options}
+            customRenderer={customRenderer}
+          />
+        ))}
+      </Tag>
+    );
+  }
+
+  private static listItem({
+    li,
+    options,
+    customRenderer,
+  }: {
+    li: ListItem;
+    options: RenderDeltaOptions;
+    customRenderer: CustomRenderer | null | undefined;
+  }): ReactNode {
     li.item.op.attributes.indent = 0;
-    const converter = new RenderOp(li.item.op, this.state.converterOptions);
+    const converter = new RenderOp(li.item.op, options);
     return converter.renderOp(
       <>
-        {this.renderInlines(li.item.ops)}
-        {li.innerList && this.renderList(li.innerList)}
+        <RenderDelta.inlines
+          ops={li.item.ops}
+          options={options}
+          customRenderer={customRenderer}
+        />
+        {li.innerList && (
+          <RenderDelta.list
+            list={li.innerList}
+            options={options}
+            customRenderer={customRenderer}
+          />
+        )}
       </>,
     );
   }
 
-  private renderTable(table: TableGroup): ReactNode {
+  private static table({
+    tableOp,
+    options,
+    customRenderer,
+  }: {
+    tableOp: TableGroup;
+    options: RenderDeltaOptions;
+    customRenderer: CustomRenderer | null | undefined;
+  }): ReactNode {
     return (
       <table>
         <tbody>
-          {table.rows.map((row, i) => (
-            <tr key={i}>
-              {row.cells.map((cell) => this.renderTableCell(cell))}
+          {tableOp.rows.map((row, rowI) => (
+            <tr key={rowI}>
+              {row.cells.map((cell, cellI) => (
+                <RenderDelta.tableCell
+                  key={cellI}
+                  cell={cell}
+                  options={options}
+                  customRenderer={customRenderer}
+                />
+              ))}
             </tr>
           ))}
         </tbody>
@@ -239,25 +304,55 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     );
   }
 
-  private renderTableCell(cell: TableCell): ReactNode {
-    const converter = new RenderOp(cell.item.op, this.state.converterOptions);
-    const cellElements = this.renderInlines(cell.item.ops);
+  private static tableCell({
+    cell,
+    options,
+    customRenderer,
+  }: {
+    cell: TableCell;
+    options: RenderDeltaOptions;
+    customRenderer: CustomRenderer | null | undefined;
+  }): ReactNode {
+    const converter = new RenderOp(cell.item.op, options);
     return (
       <td data-row={cell.item.op.attributes.table}>
-        {converter.renderOp(cellElements)}
+        {converter.renderOp(
+          <RenderDelta.inlines
+            ops={cell.item.ops}
+            options={options}
+            customRenderer={customRenderer}
+          />,
+        )}
       </td>
     );
   }
 
-  private renderBlock(blockOp: DeltaInsertOp, ops: DeltaInsertOp[]) {
-    const converter = new RenderOp(blockOp, this.state.converterOptions);
+  private static block({
+    blockOp,
+    ops,
+    options,
+    customRenderer,
+  }: {
+    blockOp: DeltaInsertOp;
+    ops: DeltaInsertOp[];
+    options: RenderDeltaOptions;
+    customRenderer: CustomRenderer | null | undefined;
+  }) {
+    const converter = new RenderOp(blockOp, options);
 
     if (blockOp.isCodeBlock()) {
       return converter.renderOp(
-        ops.map((iop) =>
-          iop.isCustomEmbed()
-            ? this.renderCustom(iop, blockOp)
-            : (iop.insert.value as string),
+        ops.map((iop, i) =>
+          iop.isCustomEmbed() ? (
+            <RenderDelta.custom
+              key={i}
+              op={iop}
+              contextOp={blockOp}
+              customRenderer={customRenderer}
+            />
+          ) : (
+            <Fragment key={i}>{iop.insert.value as string}</Fragment>
+          ),
         ),
       );
     }
@@ -266,45 +361,93 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     return converter.renderOp(
       ops.map((op, i) => {
         if (op.isJustNewline()) {
-          return i < lastInd ? '\n' : null;
+          return <Fragment key={i}>{i < lastInd ? '\n' : null}</Fragment>;
         }
-        return this.renderInline(op, blockOp);
+        return (
+          <RenderDelta.inline
+            key={i}
+            op={op}
+            contextOp={blockOp}
+            options={options}
+            customRenderer={customRenderer}
+          />
+        );
       }),
     );
   }
 
-  private renderInlines(ops: DeltaInsertOp[]): ReactNode[] {
+  private static inlines({
+    ops,
+    options,
+    customRenderer,
+  }: {
+    ops: DeltaInsertOp[];
+    options: RenderDeltaOptions;
+    customRenderer: CustomRenderer | null | undefined;
+  }): ReactNode[] {
     const lastIndex = ops.length - 1;
     return ops.map((op, i) => {
       if (i > 0 && i === lastIndex && op.isJustNewline()) {
-        return null;
+        return <Fragment key={i} />;
       }
-      return this.renderInline(op, null);
+      return (
+        <RenderDelta.inline
+          key={i}
+          op={op}
+          contextOp={null}
+          options={options}
+          customRenderer={customRenderer}
+        />
+      );
     });
   }
 
-  private renderInline(
-    op: DeltaInsertOp,
-    contextOp: DeltaInsertOp | null,
-  ): ReactNode {
+  private static inline({
+    op,
+    contextOp,
+    options,
+    customRenderer,
+  }: {
+    op: DeltaInsertOp;
+    contextOp: DeltaInsertOp | null;
+    options: RenderDeltaOptions;
+    customRenderer: CustomRenderer | null | undefined;
+  }): ReactNode {
     if (op.isCustomEmbed()) {
-      return this.renderCustom(op, contextOp);
+      return (
+        <RenderDelta.custom
+          op={op}
+          contextOp={contextOp}
+          customRenderer={customRenderer}
+        />
+      );
     }
-    const ro = new RenderOp(op, this.state.converterOptions);
+    const ro = new RenderOp(op, options);
     return ro.renderOp(
       op.insert.value === '\n' ? null : (op.insert as InsertDataQuill).value,
     );
   }
 
-  private renderVideo(op: DeltaInsertOp): ReactNode {
-    const ro = new RenderOp(op, this.state.converterOptions);
+  private static video({
+    op,
+    options,
+  }: {
+    op: DeltaInsertOp;
+    options: RenderDeltaOptions;
+  }): ReactNode {
+    const ro = new RenderOp(op, options);
     return ro.renderOp(null);
   }
 
-  private renderCustom(
-    op: DeltaInsertOp<InsertDataCustom>,
-    contextOp: DeltaInsertOp | null,
-  ): ReactNode {
-    return this.props.customRenderer?.(op, contextOp) ?? null;
+  private static custom({
+    op,
+    contextOp,
+    customRenderer,
+  }: {
+    op: DeltaInsertOp<InsertDataCustom>;
+    contextOp: DeltaInsertOp | null;
+    customRenderer: CustomRenderer | null | undefined;
+  }): ReactNode {
+    return customRenderer?.(op, contextOp) ?? null;
   }
 }

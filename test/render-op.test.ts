@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'vitest';
-import { OpToNodeConverterOptions, RenderOp } from '../src/render-op.js';
+import { RenderOp, RenderOpOptions } from '../src/render-op.js';
 import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
 import { InsertDataQuill } from '../src/InsertData.js';
 import {
@@ -235,7 +235,7 @@ describe('RenderOp', () => {
   });
 
   describe('getClasses', () => {
-    const options: Partial<OpToNodeConverterOptions> = {
+    const options: Partial<RenderOpOptions> = {
       customClasses: (op) => {
         if (op.attributes.size === 'small') {
           return ['small-size-a'];

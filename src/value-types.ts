@@ -27,11 +27,3 @@ export enum DataType {
   Formula = 'formula',
   Text = 'text',
 }
-
-export enum GroupType {
-  Block = 'block',
-  InlineGroup = 'inline-group',
-  List = 'list',
-  Video = 'video',
-  Table = 'table',
-}
