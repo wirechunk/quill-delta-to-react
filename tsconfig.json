@@ -1,29 +1,24 @@
 {
-   "compilerOptions": {
-      "module": "NodeNext",
-      "moduleResolution": "NodeNext",
-      "preserveConstEnums": true,
-      "sourceMap": false,
-      "target": "ES2022",
-      "lib": ["DOM", "ES2021", "ES2023.Array"],
-      "outDir": "dist",
-      "types": [
-         "node"
-      ],
-      "declaration": true,
-      "noImplicitThis": true,
-      "noImplicitAny": true,
-      "strict": true,
-      "strictNullChecks": true,
-      "skipLibCheck": true,
-      "noUnusedParameters": true,
-      "noUnusedLocals": true,
-      "noFallthroughCasesInSwitch": true,
-      "esModuleInterop": true,
-      "jsx": "react-jsx"
-   },
-   "include": [
-      "src/**/*.ts",
-      "src/**/*.tsx"
-   ]
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "preserveConstEnums": true,
+    "sourceMap": false,
+    "target": "ES2022",
+    "lib": ["DOM", "ES2021", "ES2023.Array"],
+    "outDir": "dist",
+    "types": ["node"],
+    "declaration": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
