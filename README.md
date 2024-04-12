@@ -1,6 +1,6 @@
 # Render Quill's Delta ops in React
 
-Converts [Quill's](https://quilljs.com) [Delta](https://quilljs.com/docs/delta/) format to HTML.
+See [Quill](https://quilljs.com), [Delta](https://quilljs.com/docs/delta/)
 
 ## Quickstart
 
@@ -33,16 +33,18 @@ This library is designed to provide a lot of _flexibility_ and _extensibility_. 
 At the same time, we take _performance_ seriously. You can have many instances of a RenderDelta component on a page, and it will render
 quickly and efficiently.
 
+Finally, this library keeps dependencies to a minimum, and the dependencies that it has are kept up-to-date.
+
 ## Configuration
 
-`QuillDeltaToHtmlConverter` accepts a few configuration options as shown below:
+The `RenderDelta` component accepts a few configuration options with the `options` prop as shown below:
 
-|Option | Type | Default | Description                                                                                                                                                                                                             
+|Option|Type|Default| Description                                                                                                                                                                                                             
 |---|---|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|`paragraphTag`| string |  'p' | Custom tag to wrap inline html elements                                                                                                                                                                                 |
-|`classPrefix`| string | 'ql' | A css class name to prefix class generating styles such as `size`, `font`, etc.                                                                                                                                         |
-|`inlineStyles`| boolean or object | false | If true or an object, use inline styles instead of classes. See Rendering Inline Styles section below for using an object                                                                                               |
-|`multiLineBlockquote`| boolean | true | Instead of rendering multiple `blockquote` elements for quotes that are consecutive and have same styles(`align`, `indent`, and `direction`), it renders them into only one                                             |
+|`paragraphTag`|string|'p'| Custom tag to wrap elements                                                                                                                                                                                             |
+|`classPrefix`|string |'ql'| A CSS class name to prefix classes for styles such as `size` and `font`                                                                                                                                                 |
+|`inlineStyles`|boolean or object|false| If true or an object, use inline styles instead of classes. See Rendering Inline Styles section below for using an object                                                                                               |
+|`multiLineBlockquote`| boolean | true | Instead of rendering multiple `blockquote` elements for quotes that are consecutive and have exactly the same attributes, render them into only one                                                                 |
 |`multiLineHeader`| boolean | true | Same deal as `multiLineBlockquote` for headers                                                                                                                                                                          |
 |`multiLineCodeBlock`| boolean | true | Same deal as `multiLineBlockquote` for code-blocks                                                                                                                                                                      |
 |`linkRel`| string | none | Specifies a value to put on the `rel` attr on all links. This can be overridden by an individual link op by specifying the `rel` attribute in the respective op's attributes                                            |
@@ -117,7 +119,7 @@ and returns an object of CSS properties (or undefined).
 ## Advanced Custom Rendering
 
 In addition to providing custom HTML element tags, classes, styles, and any other attribute, you can define custom Op types and provide a
-rendering function for these types.
+rendering function for these types with a `customRenderer` prop.
 
 By default your custom ops will be treated as inlines, but you can set the `renderAsBlock: true` property in an op's attributes to have it
 rendered as a block.
