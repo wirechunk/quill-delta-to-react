@@ -113,29 +113,14 @@ export class DeltaInsertOp<Insert extends InsertData = InsertData> {
     );
   }
 
-  isSameTableRowAs(op: DeltaInsertOp): boolean {
-    return (
-      op.isTable() &&
-      this.isTable() &&
-      this.attributes.table === op.attributes.table
-    );
-  }
-
-  isText(): this is DeltaInsertOp<InsertDataQuill<DataType.Text>> {
-    return (
-      this.insert instanceof InsertDataQuill &&
-      this.insert.type === DataType.Text
-    );
-  }
-
-  isImage() {
+  isImage(): this is DeltaInsertOp<InsertDataQuill<DataType.Image>> {
     return (
       this.insert instanceof InsertDataQuill &&
       this.insert.type === DataType.Image
     );
   }
 
-  isFormula(): this is DeltaInsertOp<InsertDataQuill<DataType.Text>> {
+  isFormula(): this is DeltaInsertOp<InsertDataQuill<DataType.Formula>> {
     return (
       this.insert instanceof InsertDataQuill &&
       this.insert.type === DataType.Formula
@@ -150,7 +135,11 @@ export class DeltaInsertOp<Insert extends InsertData = InsertData> {
   }
 
   isLink() {
-    return this.isText() && !!this.attributes.link;
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Text &&
+      !!this.attributes.link
+    );
   }
 
   isCustomEmbed(): this is DeltaInsertOp<InsertDataCustom> {
@@ -162,6 +151,10 @@ export class DeltaInsertOp<Insert extends InsertData = InsertData> {
   }
 
   isMentions(): this is DeltaInsertOp<InsertDataQuill<DataType.Text>> {
-    return this.isText() && !!this.attributes.mentions;
+    return (
+      this.insert instanceof InsertDataQuill &&
+      this.insert.type === DataType.Text &&
+      !!this.attributes.mentions
+    );
   }
 }

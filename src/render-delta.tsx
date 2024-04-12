@@ -29,6 +29,7 @@ import { denormalizeInsertOp } from './denormalize.js';
 import { convertInsertValue, isDeltaInsertOp } from './convert-insert-value.js';
 import { Component, Fragment, JSX, ReactNode } from 'react';
 import { InsertDataCustom, InsertDataQuill } from './InsertData.js';
+import { DataType } from './value-types.js';
 
 export type RenderDeltaOptions = OpAttributeSanitizerOptions &
   OpToNodeConverterOptions & {
@@ -186,7 +187,16 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
               }
               return g.ops;
             }
-            return [g.op];
+            // Discard any other attributes so that we do not render any markup.
+            const { insert } = g.op;
+            if (insert instanceof InsertDataCustom) {
+              return [DeltaInsertOp.createNewLineOp()];
+            }
+            return [
+              new DeltaInsertOp(
+                new InsertDataQuill(DataType.Text, insert.value),
+              ),
+            ];
           }),
         );
       }
@@ -255,18 +265,10 @@ export class RenderDelta extends Component<RenderDeltaProps, RenderDeltaState> {
     const lastInd = ops.length - 1;
     return converter.renderOp(
       ops.map((op, i) => {
-        // if (op.isCustomEmbed()) {
-        //   return this.renderCustom(op, blockOp);
-        // }
         if (op.isJustNewline()) {
           return i < lastInd ? '\n' : null;
         }
         return this.renderInline(op, blockOp);
-        // return op.insert.value as string;
-        // const ro = new RenderOp(op, this.state.converterOptions);
-        // return ro.renderOp(
-        //   op.insert.value === '\n' ? null : (op.insert as InsertDataQuill).value,
-        // );
       }),
     );
   }

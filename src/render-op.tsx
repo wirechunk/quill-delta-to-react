@@ -154,11 +154,6 @@ export class RenderOp<Insert extends InsertData> {
     const tags = this.getTags();
     const attributes = this.getTagAttributes();
 
-    if (this.op.isJustNewline() && !Object.keys(attributes).length) {
-      // todo
-      // return null;
-    }
-
     if (this.options.customAttributes) {
       Object.assign(attributes, this.options.customAttributes(this.op));
     }
@@ -435,13 +430,14 @@ export class RenderOp<Insert extends InsertData> {
     | keyof JSX.IntrinsicElements
     | Array<keyof JSX.IntrinsicElements> {
     // embeds
-    if (!this.op.isText()) {
-      return this.op.isVideo()
-        ? 'iframe'
-        : this.op.isImage()
-          ? 'img'
-          : // formula
-            'span';
+    if (this.op.isVideo()) {
+      return 'iframe';
+    }
+    if (this.op.isImage()) {
+      return 'img';
+    }
+    if (this.op.isFormula()) {
+      return 'span';
     }
 
     const { attributes } = this.op;

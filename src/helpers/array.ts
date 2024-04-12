@@ -20,7 +20,7 @@ export const groupConsecutiveSatisfyingClassElementsWhile = <T, GroupT>(
     const currElm = arr[i];
     const prevElm: T | undefined = arr[i - 1];
     if (
-      prevElm &&
+      prevElm !== undefined &&
       currElm instanceof classType &&
       prevElm instanceof classType &&
       (!predicate || predicate(currElm, prevElm))
@@ -52,7 +52,7 @@ export const groupConsecutiveElementsWhile = <T>(
   for (let i = 0; i < arr.length; i++) {
     const currElm = arr[i];
     const prevElm: T | undefined = arr[i - 1];
-    if (prevElm && predicate(currElm, prevElm)) {
+    if (prevElm !== undefined && predicate(currElm, prevElm)) {
       const currGroup = groups[groups.length - 1];
       if (Array.isArray(currGroup)) {
         currGroup.push(currElm);

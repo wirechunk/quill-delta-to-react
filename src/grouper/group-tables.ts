@@ -14,7 +14,9 @@ const convertTableBlocksToTableRows = (items: BlockGroup[]): TableRow[] =>
   groupConsecutiveElementsWhile(
     items,
     (g, gPrev) =>
-      g.op.isTable() && gPrev.op.isTable() && g.op.isSameTableRowAs(gPrev.op),
+      g.op.isTable() &&
+      gPrev.op.isTable() &&
+      g.op.attributes.table === gPrev.op.attributes.table,
   ).map(
     (item) =>
       new TableRow(
