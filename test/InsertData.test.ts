@@ -7,11 +7,11 @@ describe('InsertDataQuill', () => {
   describe('constructor', () => {
     it('should instantiate', () => {
       const t1 = new InsertDataQuill(DataType.Video, 'https://');
-      assert.equal(t1.type === 'video', true);
+      assert.equal(t1.type === DataType.Video, true);
       assert.equal(t1.value === 'https://', true);
 
       const t2 = new InsertDataQuill(DataType.Text, 'hello');
-      assert.equal(t2.type === 'text', true);
+      assert.equal(t2.type === DataType.Text, true);
       assert.equal(t2.value === 'hello', true);
     });
   });

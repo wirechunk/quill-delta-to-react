@@ -19,34 +19,11 @@ describe('RenderOp', () => {
     it('should set default options', () => {
       const ro = new RenderOp(
         new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello')),
+        {
+          customClasses: () => 'my-class',
+        },
       );
-
-      assert.equal(ro.prefixClass(''), 'ql-');
-    });
-  });
-
-  describe('prefixClass', () => {
-    it('should not prefix a class with an empty prefix option', () => {
-      const ro = new RenderOp(
-        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa')),
-        { classPrefix: '' },
-      );
-      assert.equal(ro.prefixClass('my-class'), 'my-class');
-    });
-
-    it('should prefix class with a non-empty prefix', () => {
-      const ro = new RenderOp(
-        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa')),
-        { classPrefix: 'xx' },
-      );
-      assert.equal(ro.prefixClass('my-class'), 'xx-my-class');
-    });
-
-    it('should prefix class with the default with no prefix specified', () => {
-      const ro = new RenderOp(
-        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa')),
-      );
-      assert.equal(ro.prefixClass('my-class'), 'ql-my-class');
+      assert.deepEqual(ro.getCustomClasses(), ['my-class']);
     });
   });
 
@@ -261,7 +238,7 @@ describe('RenderOp', () => {
     const options: Partial<OpToNodeConverterOptions> = {
       customClasses: (op) => {
         if (op.attributes.size === 'small') {
-          return ['small-size'];
+          return ['small-size-a'];
         }
       },
     };
@@ -276,11 +253,11 @@ describe('RenderOp', () => {
     };
 
     const expectedClasses = [
-      'small-size',
-      'ql-indent-1',
+      'small-size-a',
       'ql-align-center',
       'ql-direction-rtl',
       'ql-font-roman',
+      'ql-indent-1',
       'ql-size-small',
     ];
 
@@ -293,7 +270,37 @@ describe('RenderOp', () => {
       assert.deepEqual(ro.getClasses(), []);
     });
 
-    it('should return prefixed classes for an inline insert', () => {
+    it('should not prefix a class with an empty custom prefix', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), attrs),
+        { ...options, classPrefix: '' },
+      );
+      assert.deepEqual(ro.getClasses(), [
+        'small-size-a',
+        'align-center',
+        'direction-rtl',
+        'font-roman',
+        'indent-1',
+        'size-small',
+      ]);
+    });
+
+    it('should prefix each class with a non-empty custom prefix', () => {
+      const ro = new RenderOp(
+        new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'aa'), attrs),
+        { ...options, classPrefix: 'xx' },
+      );
+      assert.deepEqual(ro.getClasses(), [
+        'small-size-a',
+        'xx-align-center',
+        'xx-direction-rtl',
+        'xx-font-roman',
+        'xx-indent-1',
+        'xx-size-small',
+      ]);
+    });
+
+    it('should by default return prefixed classes for an inline insert', () => {
       const ro = new RenderOp(
         new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'hello'), attrs),
         options,
@@ -338,8 +345,13 @@ describe('RenderOp', () => {
         allowBackgroundClasses: true,
       });
       assert.deepEqual(ro.getClasses(), [
-        ...expectedClasses,
+        'small-size-a',
+        'ql-align-center',
         'ql-background-red',
+        'ql-direction-rtl',
+        'ql-font-roman',
+        'ql-indent-1',
+        'ql-size-small',
       ]);
     });
 

@@ -8,7 +8,7 @@ import {
   ReactNode,
 } from 'react';
 import { DeltaInsertOp } from './DeltaInsertOp.js';
-import { ScriptType } from './value-types.js';
+import { DirectionType, ScriptType } from './value-types.js';
 import { OpAttributes, OpAttributeSanitizer } from './OpAttributeSanitizer.js';
 import { Property } from 'csstype';
 import { InsertData } from './InsertData.js';
@@ -73,8 +73,9 @@ const DEFAULT_INLINE_STYLES: Pick<
   indent: (value, op): CSSProperties => {
     const indentSize = Number(value) * 3;
     return {
-      [op.attributes['direction'] === 'rtl' ? 'paddingRight' : 'paddingLeft']:
-        `${indentSize}em`,
+      [op.attributes['direction'] === DirectionType.Rtl
+        ? 'paddingRight'
+        : 'paddingLeft']: `${indentSize}em`,
     };
   },
 };
@@ -143,13 +144,6 @@ export class RenderOp<Insert extends InsertData> {
     };
   }
 
-  prefixClass(className: string): string {
-    if (this.options.classPrefix) {
-      return `${this.options.classPrefix}-${className}`;
-    }
-    return className;
-  }
-
   renderOp(children?: ReactNode): ReactNode {
     const tags = this.getTags();
     const attributes = this.getTagAttributes();
@@ -206,29 +200,47 @@ export class RenderOp<Insert extends InsertData> {
       return [];
     }
 
+    const classes = this.getCustomClasses();
+
     const attrs = this.op.attributes;
 
-    const props = ['indent', 'align', 'direction', 'font', 'size'];
-    if (this.options.allowBackgroundClasses) {
-      props.push('background');
+    const prefix = this.options.classPrefix
+      ? `${this.options.classPrefix}-`
+      : '';
+
+    if (attrs.align) {
+      classes.push(`${prefix}align-${attrs.align}`);
+    }
+    if (
+      attrs.background &&
+      this.options.allowBackgroundClasses &&
+      OpAttributeSanitizer.IsValidColorLiteral(attrs.background)
+    ) {
+      classes.push(`${prefix}background-${attrs.background}`);
+    }
+    if (attrs.direction) {
+      classes.push(`${prefix}direction-${attrs.direction}`);
+    }
+    if (attrs.font) {
+      classes.push(`${prefix}font-${attrs.font}`);
+    }
+    if (attrs.indent) {
+      classes.push(`${prefix}indent-${attrs.indent}`);
+    }
+    if (attrs.size) {
+      classes.push(`${prefix}size-${attrs.size}`);
+    }
+    if (this.op.isFormula()) {
+      classes.push(`${prefix}formula`);
+    }
+    if (this.op.isImage()) {
+      classes.push(`${prefix}image`);
+    }
+    if (this.op.isVideo()) {
+      classes.push(`${prefix}video`);
     }
 
-    return this.getCustomClasses().concat(
-      props
-        .filter(
-          (prop) =>
-            prop in attrs &&
-            attrs[prop] &&
-            (prop === 'background'
-              ? OpAttributeSanitizer.IsValidColorLiteral(attrs[prop] as string)
-              : true),
-        )
-        .map((prop) => `${prop}-${attrs[prop]}`)
-        .concat(this.op.isFormula() ? 'formula' : [])
-        .concat(this.op.isVideo() ? 'video' : [])
-        .concat(this.op.isImage() ? 'image' : [])
-        .map(this.prefixClass.bind(this)),
-    );
+    return classes;
   }
 
   getCssStyles(): CSSProperties {

@@ -4,8 +4,8 @@ import {
   DirectionType,
   ScriptType,
 } from './value-types.js';
-import { MentionSanitizer } from './MentionSanitizer.js';
-import type { Mention } from './MentionSanitizer.js';
+import { sanitizeMention } from './sanitize-mention.js';
+import type { Mention } from './sanitize-mention.js';
 
 export type OpAttributes = {
   background?: string | undefined;
@@ -218,7 +218,7 @@ export class OpAttributeSanitizer {
 
     if (mentions && mention) {
       cleanAttrs.mentions = !!mentions;
-      cleanAttrs.mention = MentionSanitizer.sanitize(mention, sanitizeOptions);
+      cleanAttrs.mention = sanitizeMention(mention, sanitizeOptions);
     }
 
     return Object.keys(dirtyAttrs).reduce((cleaned, k) => {
