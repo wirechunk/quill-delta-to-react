@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert';
 import { describe, it } from 'vitest';
 import { DeltaInsertOp } from './../src/DeltaInsertOp.js';
 import { CustomRenderer, RenderDelta } from './../src/render-delta.js';
-import { DataType, ListType, ScriptType } from './../src/value-types.js';
+import { DataType, ScriptType } from './../src/value-types.js';
 import { InsertDataCustom, InsertDataQuill } from '../src/InsertData.js';
 import { InlineGroup } from '../src/grouper/group-types.js';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -172,7 +172,10 @@ describe('RenderDelta', () => {
 
     it('should return proper HTML for complex ops', function () {
       const ops = [
-        { insert: 'link', attributes: { link: 'http://a.com/?x=a&b=()' } },
+        {
+          insert: 'link',
+          attributes: { link: 'http://a.com/?x=a&b=()', target: '_blank' },
+        },
         { insert: 'This ' },
         { attributes: { font: 'monospace' }, insert: 'is' },
         { insert: ' a ' },
@@ -213,7 +216,7 @@ describe('RenderDelta', () => {
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p><a href="http://a.com/?x=a&amp;b=()" target="_blank">link</a>This <span class="noz-font-monospace">is</span> a <span class="noz-size-large">test</span> <strong><em>data</em></strong> <s><u>that</u></s> is <span style="color:#e60000">will</span> <span style="background-color:#ffebcc">test</span> <sub>the</sub> <sup>rendering</sup> of <a href="http://yahoo" target="_blank">inline</a> <span class="noz-formula">x=data</span> formats.</p><ul><li>list</li></ul><ul><li data-checked="true">list</li></ul><p><strong><code>some code</code></strong><a href="#top" target="_blank"><em><code>Top</code></em></a></p>',
+        '<p><a href="http://a.com/?x=a&amp;b=()" target="_blank">link</a>This <span class="noz-font-monospace">is</span> a <span class="noz-size-large">test</span> <strong><em>data</em></strong> <s><u>that</u></s> is <span style="color:#e60000">will</span> <span style="background-color:#ffebcc">test</span> <sub>the</sub> <sup>rendering</sup> of <a href="http://yahoo">inline</a> <span class="noz-formula">x=data</span> formats.</p><ul><li>list</li></ul><ul><li data-checked="true">list</li></ul><p><strong><code>some code</code></strong><a href="#top"><em><code>Top</code></em></a></p>',
       );
     });
 
@@ -322,7 +325,7 @@ describe('RenderDelta', () => {
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p><a href="#" target="_blank" rel="license">hello</a></p>',
+        '<p><a href="#" rel="license">hello</a></p>',
       );
     });
 
@@ -332,6 +335,7 @@ describe('RenderDelta', () => {
           attributes: {
             link: '#',
             rel: 'nofollow noopener',
+            target: '_top',
           },
           insert: 'hello',
         },
@@ -339,7 +343,7 @@ describe('RenderDelta', () => {
       const rd = new RenderDelta({ ops });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p><a href="#" target="_blank" rel="nofollow noopener">hello</a></p>',
+        '<p><a href="#" target="_top" rel="nofollow noopener">hello</a></p>',
       );
     });
 
@@ -355,7 +359,7 @@ describe('RenderDelta', () => {
       const rd = new RenderDelta({ ops });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p><img class="ql-image" src="http://yahoo.com/abc.jpg"/><a href="http://aha" target="_blank"><img class="ql-image" src="http://yahoo.com/def.jpg"/></a></p>',
+        '<p><img class="ql-image" src="http://yahoo.com/abc.jpg"/><a href="http://aha"><img class="ql-image" src="http://yahoo.com/def.jpg"/></a></p>',
       );
     });
 
@@ -494,7 +498,7 @@ describe('RenderDelta', () => {
       });
       assert.equal(
         renderToStaticMarkup(rd.render()),
-        '<p><a href="REDACTED" target="_blank">test</a><a href="http://abc&lt;" target="_blank">hi</a></p>',
+        '<p><a href="REDACTED">test</a><a href="http://abc&lt;">hi</a></p>',
       );
     });
 
@@ -536,28 +540,28 @@ describe('RenderDelta', () => {
         { insert: '\n' },
       ];
 
-      it('should render the target attribute when linkTarget is unspecified', () => {
+      it('should by default render a target attribute on an op only when it has a target attribute', () => {
         const rd = new RenderDelta({ ops });
+        assert.equal(
+          renderToStaticMarkup(rd.render()),
+          '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#">C</a></p>',
+        );
+      });
+
+      it('should render the specified linkTarget option when it is specified while preferring the target attribute on an op', () => {
+        const rd = new RenderDelta({ ops, options: { linkTarget: '_blank' } });
         assert.equal(
           renderToStaticMarkup(rd.render()),
           '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#" target="_blank">C</a></p>',
         );
       });
 
-      it('should render the target attribute when linkTarget is an empty string', () => {
+      it('should not render an empty target attribute when linkTarget is an empty string', () => {
         const rd = new RenderDelta({ ops, options: { linkTarget: '' } });
         const html = renderToStaticMarkup(rd.render());
         assert.equal(
           html,
           '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#">C</a></p>',
-        );
-      });
-
-      it('should render the target attribute when linkTarget is _top', () => {
-        const rd = new RenderDelta({ ops, options: { linkTarget: '_top' } });
-        assert.equal(
-          renderToStaticMarkup(rd.render()),
-          '<p><a href="http://#" target="_self">A</a><a href="http://#" target="_blank">B</a><a href="http://#" target="_top">C</a></p>',
         );
       });
     });
@@ -1211,38 +1215,6 @@ describe('RenderDelta', () => {
         const rd = new RenderDelta({ ops: [op] });
         assert.deepEqual(rd.getGroupedOps(), []);
       });
-    });
-  });
-
-  describe('getListTag', () => {
-    const rd = new RenderDelta({ ops: [] });
-
-    it('should return the expected list tag for an ordered list', () => {
-      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        list: ListType.Ordered,
-      });
-      assert.equal(rd.getListTag(op), 'ol');
-    });
-
-    it('should return the expected list tag for a bullet list', () => {
-      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        list: ListType.Bullet,
-      });
-      assert.equal(rd.getListTag(op), 'ul');
-    });
-
-    it('should return the expected list tag for a checked list', () => {
-      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        list: ListType.Checked,
-      });
-      assert.equal(rd.getListTag(op), 'ul');
-    });
-
-    it('should return the expected list tag for an unchecked list', () => {
-      const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
-        list: ListType.Unchecked,
-      });
-      assert.equal(rd.getListTag(op), 'ul');
     });
   });
 });

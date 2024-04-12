@@ -10,7 +10,7 @@ import {
 import { DeltaInsertOp } from './DeltaInsertOp.js';
 import { DirectionType, ScriptType } from './value-types.js';
 import { OpAttributes, OpAttributeSanitizer } from './OpAttributeSanitizer.js';
-import { Property } from 'csstype';
+import type { Property } from 'csstype';
 import { InsertData } from './InsertData.js';
 
 export type InlineStyleFn = (
@@ -111,15 +111,15 @@ export type DataAttributes = {
 
 export type HTMLAttributes = ReactHTMLAttributes<object> & DataAttributes;
 
-export type OpToNodeConverterOptions = {
-  classPrefix?: string;
-  inlineStyles?: boolean | Partial<InlineStyles>;
-  listItemTag?: keyof JSX.IntrinsicElements;
-  mentionTag?: keyof JSX.IntrinsicElements;
-  paragraphTag?: keyof JSX.IntrinsicElements;
+export type RenderOpOptions = {
+  classPrefix: string;
+  inlineStyles: boolean | Partial<InlineStyles>;
+  listItemTag: keyof JSX.IntrinsicElements;
+  mentionTag: keyof JSX.IntrinsicElements;
+  paragraphTag: keyof JSX.IntrinsicElements;
   linkRel?: string;
   linkTarget?: string;
-  allowBackgroundClasses?: boolean;
+  allowBackgroundClasses: boolean;
   customTag?: (
     format: BlockAttribute | InlineAttribute,
     op: DeltaInsertOp,
@@ -129,17 +129,23 @@ export type OpToNodeConverterOptions = {
   customCssStyles?: (op: DeltaInsertOp) => CSSProperties | undefined;
 };
 
+export const renderOpOptionsDefault = Object.freeze<RenderOpOptions>({
+  classPrefix: 'ql',
+  inlineStyles: false,
+  listItemTag: 'li',
+  mentionTag: 'a',
+  paragraphTag: 'p',
+  allowBackgroundClasses: false,
+});
+
 export class RenderOp<Insert extends InsertData> {
-  private readonly options: OpToNodeConverterOptions;
+  private readonly options: RenderOpOptions;
   private readonly op: DeltaInsertOp<Insert>;
 
-  constructor(op: DeltaInsertOp<Insert>, options?: OpToNodeConverterOptions) {
+  constructor(op: DeltaInsertOp<Insert>, options?: Partial<RenderOpOptions>) {
     this.op = op;
     this.options = {
-      classPrefix: 'ql',
-      listItemTag: 'li',
-      mentionTag: 'a',
-      paragraphTag: 'p',
+      ...renderOpOptionsDefault,
       ...options,
     };
   }
@@ -403,24 +409,12 @@ export class RenderOp<Insert extends InsertData> {
       href: this.op.attributes.link,
     };
 
-    const target =
-      this.op.attributes.target ||
-      (this.options.linkTarget &&
-      OpAttributeSanitizer.isValidTarget(this.options.linkTarget)
-        ? this.options.linkTarget
-        : undefined);
-
+    const target = this.op.attributes.target || this.options.linkTarget;
     if (target) {
       attrs.target = target;
     }
 
-    const rel =
-      this.op.attributes.rel ||
-      (this.options.linkRel &&
-      OpAttributeSanitizer.IsValidRel(this.options.linkRel)
-        ? this.options.linkRel
-        : undefined);
-
+    const rel = this.op.attributes.rel || this.options.linkRel;
     if (rel) {
       attrs.rel = rel;
     }

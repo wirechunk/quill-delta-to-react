@@ -5,18 +5,20 @@ See [Quill](https://quilljs.com), [Delta](https://quilljs.com/docs/delta/)
 ## Quickstart
 
 Installation
+
 ```
 npm install quill-delta-to-react
 ```
 
 Usage
-```javascript
+
+```
 import { RenderDelta } from 'quill-delta-to-react';
 
-const ops =  [
-  { "insert": "Hello\n" },
-  { "insert": "This is colorful", "attributes": { "color": "#ff0000" } },
-  { "insert": "\n" }
+const ops = [
+  { insert: 'Hello\n' },
+  { insert: 'This is colorful', attributes: { color: '#ff0000' } },
+  { insert: '\n' },
 ];
 
 const App = () => {
@@ -39,22 +41,22 @@ Finally, this library keeps dependencies to a minimum, and the dependencies that
 
 The `RenderDelta` component accepts a few configuration options with the `options` prop as shown below:
 
-|Option|Type|Default| Description                                                                                                                                                                                                             
-|---|---|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|`paragraphTag`|string|'p'| Custom tag to wrap elements                                                                                                                                                                                             |
-|`classPrefix`|string |'ql'| A CSS class name to prefix classes for styles such as `size` and `font`                                                                                                                                                 |
-|`inlineStyles`|boolean or object|false| If true or an object, use inline styles instead of classes. See Rendering Inline Styles section below for using an object                                                                                               |
-|`multiLineBlockquote`| boolean | true | Instead of rendering multiple `blockquote` elements for quotes that are consecutive and have exactly the same attributes, render them into only one                                                                 |
-|`multiLineHeader`| boolean | true | Same deal as `multiLineBlockquote` for headers                                                                                                                                                                          |
-|`multiLineCodeBlock`| boolean | true | Same deal as `multiLineBlockquote` for code-blocks                                                                                                                                                                      |
-|`linkRel`| string | none | Specifies a value to put on the `rel` attr on all links. This can be overridden by an individual link op by specifying the `rel` attribute in the respective op's attributes                                            |
-|`linkTarget`| string | '_blank' | Specifies target for all links; use `''` (empty string) to not generate `target` attribute. This can be overridden by an individual link op by specifiying the `target` with a value in the respective op's attributes. |
-|`allowBackgroundClasses`| boolean | false | If true, classes will be added for the background attribute                                                                                                                                                             |
-|`urlSanitizer`| function `(url: string): string` | undefined | A function that is called once per url in the ops (image, video, link) for you to do custom sanitizatio                                                                                                                 |
-|`customTag`| function `(format: string, op: DeltaInsertOp): string \| undefined` | undefined | Callback allows to provide custom tag for some format                                                                                                                                                                   |
-|`customAttributes`| function `(op: DeltaInsertOp): { [key: string]: string } \| undefined` | undefined | Allows to provide custom html tag attributes                                                                                                                                                                            |
-|`customClasses`| function `(op: DeltaInsertOp): string \| string[] \| undefined` | undefined | Allows to provide custom classes                                                                                                                                                                                        |
-|`customCssStyles`| function `(op: DeltaInsertOp): string \| string[] \| undefined` | undefined | Allows to provide custom CSS styles                                                                                                                                                                                     |
+| Option                   | Type                                                                 | Default | Description                                                                                                                                                                                   |
+| ------------------------ | -------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `paragraphTag`           | string                                                               | 'p'     | A custom tag to wrap paragraph elements.                                                                                                                                                      |
+| `classPrefix`            | string                                                               | 'ql'    | A CSS class name to prefix classes for styles such as `size` and `font`.                                                                                                                      |
+| `inlineStyles`           | boolean or object                                                    | false   | If true or an object, use inline styles instead of classes. See the Rendering Inline Styles section below for details.                                                                        |
+| `multiLineBlockquote`    | boolean                                                              | true    | Instead of rendering multiple `blockquote` elements for quotes that are consecutive and have exactly the same attributes, render them into only one.                                          |
+| `multiLineHeader`        | boolean                                                              | true    | Same deal as `multiLineBlockquote` for headers.                                                                                                                                               |
+| `multiLineCodeBlock`     | boolean                                                              | true    | Same deal as `multiLineBlockquote` for code-blocks.                                                                                                                                           |
+| `linkRel`                | string                                                               | none    | Specifies a `rel` attribute's value to put on all links. This can be overridden for any individual link by specifiying a `rel` property with a value in the respective op's attributes.       |
+| `linkTarget`             | string                                                               | none    | Specifies a `target` attribute's value to put on all links. This can be overridden for any individual link by specifiying a `target` property with a value in the respective op's attributes. |
+| `allowBackgroundClasses` | boolean                                                              | false   | If true, classes will be added for the background attribute.                                                                                                                                  |
+| `urlSanitizer`           | function (url: string): string                                       | none    | A function that is called once per URL in the ops (image, video, link) for you to do sanitization.                                                                                            |
+| `customTag`              | function (format: string, op: DeltaInsertOp): string \| undefined    | none    | Callback allows to provide custom tag for some formats.                                                                                                                                       |
+| `customAttributes`       | function (op: DeltaInsertOp): { [key: string]: string } \| undefined | none    | Allows to provide custom HTML tag attributes.                                                                                                                                                 |
+| `customClasses`          | function (op: DeltaInsertOp): string \| string[] \| undefined        | none    | A function that can provide custom classes for any op (except for custom op types).                                                                                                           |
+| `customCssStyles`        | function (op: DeltaInsertOp): string \| string[] \| undefined        | none    | A function that can provide custom CSS styles for any op (except for custom op types).                                                                                                        |
 
 ## Rendering Inline Styles
 
@@ -62,7 +64,7 @@ The easiest way to enable this is to pass the option `inlineStyles: true`.
 
 You can customize styles by passing an object for `inlineStyles` instead. Below is how the default inline styles are configured:
 
-```javascript
+```
 const DEFAULT_INLINE_STYLES = {
   direction: (value, op) => {
     if (value === 'rtl') {
@@ -80,26 +82,26 @@ const DEFAULT_INLINE_STYLES = {
   },
   font: (value) => {
     switch (value) {
-    case 'serif':
-      return { fontFamily: 'Georgia, Times New Roman, serif' };
-    case 'monospace':
-      return { fontFamily: 'Monaco, Courier New, monospace' };
-    default:
-      if (typeof value === 'string') {
-        return { fontFamily: value };
-      }
+      case 'serif':
+        return { fontFamily: 'Georgia, Times New Roman, serif' };
+      case 'monospace':
+        return { fontFamily: 'Monaco, Courier New, monospace' };
+      default:
+        if (typeof value === 'string') {
+          return { fontFamily: value };
+        }
     }
   },
   size: (value) => {
     switch (value) {
-    case 'small':
-      return { fontSize: '0.75em' };
-    case 'large':
-      return { fontSize: '1.5em' };
-    case 'huge':
-      return { fontSize: '2.5em' };
-    default:
-      return undefined;
+      case 'small':
+        return { fontSize: '0.75em' };
+      case 'large':
+        return { fontSize: '1.5em' };
+      case 'huge':
+        return { fontSize: '2.5em' };
+      default:
+        return undefined;
     }
   },
   indent: (value, op) => {
