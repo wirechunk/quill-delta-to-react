@@ -2,6 +2,9 @@
   "name": "quill-delta-to-react",
   "version": "0.1.0",
   "description": "Converts Quill's Delta ops to React",
+  "publishConfig": {
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/main.js",
   "types": "./dist/main.d.ts",
@@ -22,6 +25,7 @@
     "husky": "^9.0.11",
     "prettier": "^3.2.5",
     "pretty-quick": "^4.0.0",
+    "semantic-release": "^23.0.8",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.6.0",
@@ -40,10 +44,7 @@
     "typecheck": "./node_modules/typescript/bin/tsc --project ./tsconfig.test.json --noEmit",
     "test": "vitest run"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/wirechunk/quill-delta-to-react.git"
-  },
+  "repository": "github:wirechunk/quill-delta-to-react",
   "keywords": [
     "quill",
     "delta",
@@ -60,5 +61,10 @@
     "hooks": {
       "pre-commit": "pretty-quick --staged"
     }
+  },
+  "release": {
+    "branches": [
+      "master"
+    ]
   }
 }
