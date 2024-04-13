@@ -2,7 +2,7 @@ name: Publish to npm
 on:
   push:
     branches:
-      - main
+      - master
 permissions:
   contents: write # Publish a GitHub release
   issues: write # Comment on released issues
