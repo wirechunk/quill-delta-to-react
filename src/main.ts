@@ -1,4 +1,4 @@
-export { RenderDelta } from './render-delta.js';
+export { RenderDelta, RenderDeltaProps } from './render-delta.js';
 export {
   BlockGroup,
   BlotBlock,

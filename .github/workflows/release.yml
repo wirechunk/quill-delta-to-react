@@ -1,8 +1,5 @@
 name: Publish to npm
-on:
-  push:
-    branches:
-      - master
+on: workflow_dispatch
 permissions:
   contents: write # Publish a GitHub release
   issues: write # Comment on released issues
