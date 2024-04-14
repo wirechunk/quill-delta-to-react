@@ -42,6 +42,9 @@ export type RenderDeltaProps = {
   customRenderer?: CustomRenderer | null;
 };
 
+/**
+ * Render Quill Delta ops.
+ */
 export const RenderDelta: FunctionComponent<RenderDeltaProps> = (props) => {
   const options = useMemo<RenderDeltaOptions>(() => {
     let inlineStyles: boolean | Partial<InlineStyles> = false;
