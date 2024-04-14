@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
-import { DeltaInsertOp } from '../../src/DeltaInsertOp.js';
+import { DeltaInsertOp } from '../../src/delta-insert-op.js';
 import { groupTables } from '../../src/grouper/group-tables.js';
 import {
   TableGroup,
@@ -9,7 +9,7 @@ import {
   BlockGroup,
 } from '../../src/grouper/group-types.js';
 import { pairOpsWithTheirBlock } from '../../src/grouper/grouping.js';
-import { InsertDataQuill } from '../../src/InsertData.js';
+import { InsertDataQuill } from '../../src/insert-data.js';
 import { DataType } from '../../src/value-types.js';
 
 describe('TableGrouper', function () {

@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'vitest';
 import { RenderOp, RenderOpOptions } from '../src/render-op.js';
-import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
-import { InsertDataQuill } from '../src/InsertData.js';
+import { DeltaInsertOp } from '../src/delta-insert-op.js';
+import { InsertDataQuill } from '../src/insert-data.js';
 import {
   AlignType,
   DataType,
@@ -11,7 +11,7 @@ import {
   ScriptType,
 } from '../src/value-types.js';
 import type { CSSProperties } from 'react';
-import type { OpAttributes } from '../src/OpAttributeSanitizer.js';
+import type { OpAttributes } from '../src/sanitize-attributes.js';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 describe('RenderOp', () => {

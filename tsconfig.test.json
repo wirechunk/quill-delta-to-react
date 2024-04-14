@@ -3,6 +3,7 @@
   "include": [
     "eslint.config.js",
     "src/**/*.ts",
+    "src/**/*.tsx",
     "test/**/*.ts",
     "test/**/*.tsx"
   ]

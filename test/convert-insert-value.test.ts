@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'vitest';
-import { InsertDataQuill } from './../src/InsertData.js';
+import { InsertDataQuill } from '../src/insert-data.js';
 import { convertInsertValue } from '../src/convert-insert-value.js';
 import { DataType } from '../src/value-types.js';
 
