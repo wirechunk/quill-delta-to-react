@@ -1,5 +1,5 @@
-import { DeltaInsertOp } from './../DeltaInsertOp.js';
-import { InsertDataCustom, InsertDataQuill } from '../InsertData.js';
+import type { DeltaInsertOp } from '../delta-insert-op.js';
+import type { InsertDataCustom, InsertDataQuill } from '../insert-data.js';
 
 export class InlineGroup {
   constructor(readonly ops: DeltaInsertOp[]) {}

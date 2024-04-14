@@ -7,8 +7,8 @@ export {
   ListItem,
   VideoItem,
 } from './grouper/group-types.js';
-export { DeltaInsertOp } from './DeltaInsertOp.js';
-export { InsertDataQuill, InsertDataCustom } from './InsertData.js';
+export { DeltaInsertOp } from './delta-insert-op.js';
+export { InsertDataQuill, InsertDataCustom } from './insert-data.js';
 export {
   ListType,
   ScriptType,

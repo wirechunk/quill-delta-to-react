@@ -1,5 +1,9 @@
-import type { OpAttributeSanitizerOptions } from './OpAttributeSanitizer.js';
-import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
+import type { OpAttributeSanitizerOptions } from './sanitize-attributes.js';
+import {
+  InsertData,
+  InsertDataCustom,
+  InsertDataQuill,
+} from './insert-data.js';
 import { DataType } from './value-types.js';
 
 const isNonNullObject = (obj: unknown): obj is Record<string, unknown> =>

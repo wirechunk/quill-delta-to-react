@@ -7,11 +7,11 @@ import {
   JSX,
   ReactNode,
 } from 'react';
-import { DeltaInsertOp } from './DeltaInsertOp.js';
+import { DeltaInsertOp } from './delta-insert-op.js';
 import { DirectionType, ScriptType } from './value-types.js';
-import { OpAttributes, OpAttributeSanitizer } from './OpAttributeSanitizer.js';
+import { isValidColorLiteral, OpAttributes } from './sanitize-attributes.js';
 import type { Property } from 'csstype';
-import { InsertData } from './InsertData.js';
+import { InsertData } from './insert-data.js';
 
 export type InlineStyleFn = (
   value: string | number | boolean,
@@ -220,7 +220,7 @@ export class RenderOp<Insert extends InsertData> {
     if (
       attrs.background &&
       this.options.allowBackgroundClasses &&
-      OpAttributeSanitizer.IsValidColorLiteral(attrs.background)
+      isValidColorLiteral(attrs.background)
     ) {
       classes.push(`${prefix}background-${attrs.background}`);
     }

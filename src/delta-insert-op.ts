@@ -1,6 +1,10 @@
 import { DataType, ListType } from './value-types.js';
-import type { OpAttributes } from './OpAttributeSanitizer.js';
-import { InsertData, InsertDataCustom, InsertDataQuill } from './InsertData.js';
+import type { OpAttributes } from './sanitize-attributes.js';
+import {
+  InsertData,
+  InsertDataCustom,
+  InsertDataQuill,
+} from './insert-data.js';
 import isEqual from 'lodash.isequal';
 
 export class DeltaInsertOp<Insert extends InsertData = InsertData> {

@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
-import { InsertDataQuill } from '../src/InsertData.js';
-import { DeltaInsertOp } from '../src/DeltaInsertOp.js';
+import { InsertDataQuill } from '../src/insert-data.js';
+import { DeltaInsertOp } from '../src/delta-insert-op.js';
 import { DataType, ListType } from '../src/value-types.js';
 
 describe('DeltaInsertOp', () => {
@@ -50,7 +50,7 @@ describe('DeltaInsertOp', () => {
     });
   });
 
-  describe('isJustNewline()', function () {
+  describe('isJustNewline', function () {
     it('should return true if op is a list', function () {
       let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
       assert.equal(op.isJustNewline(), true);
@@ -62,7 +62,7 @@ describe('DeltaInsertOp', () => {
     });
   });
 
-  describe('isList()', function () {
+  describe('isList', function () {
     it('should return true if op is a list', function () {
       let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {});
       assert.equal(op.isList(), false);
@@ -79,7 +79,7 @@ describe('DeltaInsertOp', () => {
     });
   });
 
-  describe('isBulletList()', function () {
+  describe('isBulletList', function () {
     it('should return true if op is a bullet list', function () {
       let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Bullet,
@@ -93,7 +93,7 @@ describe('DeltaInsertOp', () => {
     });
   });
 
-  describe('isOrderedList()', function () {
+  describe('isOrderedList', function () {
     it('should return true if op is an ordered list', function () {
       let op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, '\n'), {
         list: ListType.Bullet,

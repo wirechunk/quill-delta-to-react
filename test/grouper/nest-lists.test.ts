@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
 import { nestLists } from '../../src/grouper/nest-lists.js';
-import { DeltaInsertOp } from './../../src/DeltaInsertOp.js';
+import { DeltaInsertOp } from '../../src/delta-insert-op.js';
 import {
   ListGroup,
   ListItem,
@@ -10,7 +10,7 @@ import {
 } from './../../src/grouper/group-types.js';
 import { DataType, ListType } from './../../src/value-types.js';
 import { pairOpsWithTheirBlock } from '../../src/grouper/grouping.js';
-import { InsertDataQuill } from '../../src/InsertData.js';
+import { InsertDataQuill } from '../../src/insert-data.js';
 
 describe('nestLists', function () {
   it('should not nest different types of lists', function () {

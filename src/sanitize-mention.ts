@@ -1,7 +1,7 @@
 import {
-  OpAttributeSanitizer,
+  isValidTarget,
   OpAttributeSanitizerOptions,
-} from './OpAttributeSanitizer.js';
+} from './sanitize-attributes.js';
 
 // See https://github.com/quill-mention/quill-mention
 export type Mention = {
@@ -40,10 +40,7 @@ export const sanitizeMention = (
         }
         break;
       case 'target':
-        if (
-          typeof value === 'string' &&
-          OpAttributeSanitizer.isValidTarget(value)
-        ) {
+        if (typeof value === 'string' && isValidTarget(value)) {
           cleanObj.target = value;
         }
         break;

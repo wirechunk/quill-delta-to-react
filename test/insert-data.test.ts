@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import { strict as assert } from 'node:assert';
-import { InsertDataQuill, InsertDataCustom } from './../src/InsertData.js';
+import { InsertDataQuill, InsertDataCustom } from '../src/insert-data.js';
 import { DataType } from './../src/value-types.js';
 
 describe('InsertDataQuill', () => {
