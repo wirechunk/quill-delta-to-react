@@ -336,7 +336,8 @@ describe('RenderDelta', () => {
     const props: RenderDeltaProps = { ops };
     assert.equal(
       render(props),
-      '<p><img class="ql-image" src="http://yahoo.com/abc.jpg"/><a href="http://aha"><img class="ql-image" src="http://yahoo.com/def.jpg"/></a></p>',
+      // Note preload directives are added only because we're using the renderToStaticMarkup function.
+      '<link rel="preload" as="image" href="http://yahoo.com/abc.jpg"/><link rel="preload" as="image" href="http://yahoo.com/def.jpg"/><p><img class="ql-image" src="http://yahoo.com/abc.jpg"/><a href="http://aha"><img class="ql-image" src="http://yahoo.com/def.jpg"/></a></p>',
     );
   });
 

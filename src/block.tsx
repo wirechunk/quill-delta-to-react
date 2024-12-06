@@ -22,7 +22,7 @@ export const Block = ({
       ops.map((iop, i) => (
         <Fragment key={i}>
           {iop.isCustomEmbed()
-            ? customRenderer?.(iop, blockOp) ?? null
+            ? (customRenderer?.(iop, blockOp) ?? null)
             : (iop.insert.value as string)}
         </Fragment>
       )),
