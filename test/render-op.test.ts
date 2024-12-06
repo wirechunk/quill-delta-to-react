@@ -512,8 +512,9 @@ describe('RenderOp', () => {
         customClasses: () => 'my-img',
       });
       assert.equal(
+        // Note preload directives are added only because we're using the renderToStaticMarkup function.
         renderToStaticMarkup(ro.renderOp('something')),
-        '<img class="my-img ql-image" src="https://example.com/hello.png"/>',
+        '<link rel="preload" as="image" href="https://example.com/hello.png"/><img class="my-img ql-image" src="https://example.com/hello.png"/>',
       );
     });
 
@@ -529,7 +530,8 @@ describe('RenderOp', () => {
       });
       assert.equal(
         renderToStaticMarkup(ro.renderOp('something')),
-        '<a href="https://example.com/hello"><img class="my-img ql-image" src="https://example.com/hello.png"/></a>',
+        // Note preload directives are added only because we're using the renderToStaticMarkup function.
+        '<link rel="preload" as="image" href="https://example.com/hello.png"/><a href="https://example.com/hello"><img class="my-img ql-image" src="https://example.com/hello.png"/></a>',
       );
     });
 
@@ -744,7 +746,8 @@ describe('RenderOp', () => {
       });
       assert.equal(
         renderToStaticMarkup(ro.renderOp(null)),
-        '<img class="my-custom-class ql-image" src="https://example.com/hello.png" alt="Hello"/>',
+        // Note preload directives are added only because we're using the renderToStaticMarkup function.
+        '<link rel="preload" as="image" href="https://example.com/hello.png"/><img class="my-custom-class ql-image" src="https://example.com/hello.png" alt="Hello"/>',
       );
     });
 
@@ -759,7 +762,7 @@ describe('RenderOp', () => {
       );
       assert.equal(
         renderToStaticMarkup(ro.renderOp(null)),
-        `<iframe style="border:none" class="ql-video" allowfullscreen="" src="https://example.com/vid1.mp4"></iframe>`,
+        `<iframe style="border:none" class="ql-video" allowFullScreen="" src="https://example.com/vid1.mp4"></iframe>`,
       );
     });
   });
