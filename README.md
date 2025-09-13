@@ -62,58 +62,7 @@ The `RenderDelta` component accepts a few configuration options with the `option
 
 The easiest way to enable this is to pass the option `inlineStyles: true`.
 
-You can customize styles by passing an object for `inlineStyles` instead. Below is how the default inline styles are configured:
-
-```
-const DEFAULT_INLINE_STYLES = {
-  direction: (value, op) => {
-    if (value === 'rtl') {
-      if (op.attributes['align']) {
-        return {
-          direction: 'rtl',
-        };
-      }
-      return {
-        direction: 'rtl',
-        textAlign: 'inherit',
-      };
-    }
-    return undefined;
-  },
-  font: (value) => {
-    switch (value) {
-      case 'serif':
-        return { fontFamily: 'Georgia, Times New Roman, serif' };
-      case 'monospace':
-        return { fontFamily: 'Monaco, Courier New, monospace' };
-      default:
-        if (typeof value === 'string') {
-          return { fontFamily: value };
-        }
-    }
-  },
-  size: (value) => {
-    switch (value) {
-      case 'small':
-        return { fontSize: '0.75em' };
-      case 'large':
-        return { fontSize: '1.5em' };
-      case 'huge':
-        return { fontSize: '2.5em' };
-      default:
-        return undefined;
-    }
-  },
-  indent: (value, op) => {
-    const indentSize = Number(value) * 3;
-    return {
-      [op.attributes['direction'] === DirectionType.Rtl
-        ? 'paddingRight'
-        : 'paddingLeft']: `${indentSize}em`,
-    };
-  },
-};
-```
+You can customize styles by passing an object for `inlineStyles` instead.
 
 Keys to this object are the names of attributes from Quill. The values are a function that takes the value of the attribute and the Op object
 and returns an object of CSS properties (or undefined).

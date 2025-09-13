@@ -28,58 +28,6 @@ export type InlineStyles = {
   [attribute: string]: InlineStyleFn | undefined;
 };
 
-const DEFAULT_INLINE_STYLES: Pick<
-  InlineStyles,
-  'direction' | 'font' | 'indent' | 'size'
-> = {
-  direction: (value, op): CSSProperties | undefined => {
-    if (value === 'rtl') {
-      if (op.attributes['align']) {
-        return {
-          direction: 'rtl',
-        };
-      }
-      return {
-        direction: 'rtl',
-        textAlign: 'inherit',
-      };
-    }
-    return undefined;
-  },
-  font: (value) => {
-    switch (value) {
-      case 'serif':
-        return { fontFamily: 'Georgia, Times New Roman, serif' };
-      case 'monospace':
-        return { fontFamily: 'Monaco, Courier New, monospace' };
-      default:
-        if (typeof value === 'string') {
-          return { fontFamily: value };
-        }
-    }
-  },
-  size: (value) => {
-    switch (value) {
-      case 'small':
-        return { fontSize: '0.75em' };
-      case 'large':
-        return { fontSize: '1.5em' };
-      case 'huge':
-        return { fontSize: '2.5em' };
-      default:
-        return undefined;
-    }
-  },
-  indent: (value, op): CSSProperties => {
-    const indentSize = Number(value) * 3;
-    return {
-      [op.attributes['direction'] === DirectionType.Rtl
-        ? 'paddingRight'
-        : 'paddingLeft']: `${indentSize}em`,
-    };
-  },
-};
-
 const blockAttributes = [
   'blockquote',
   'code-block',
@@ -293,10 +241,14 @@ export class RenderOp<Insert extends InsertData> {
               }
               break;
             case 'indent':
-              Object.assign(
-                styles,
-                DEFAULT_INLINE_STYLES.indent(value, this.op),
-              );
+              if (typeof value === 'number') {
+                const indentSize = Number(value) * 3;
+                if (this.op.attributes['direction'] === DirectionType.Rtl) {
+                  styles.paddingRight = `${indentSize}em`;
+                } else {
+                  styles.paddingLeft = `${indentSize}em`;
+                }
+              }
               break;
             case 'align':
               if (typeof value === 'string') {
@@ -304,16 +256,19 @@ export class RenderOp<Insert extends InsertData> {
               }
               break;
             case 'direction':
-              Object.assign(
-                styles,
-                DEFAULT_INLINE_STYLES.direction(value, this.op),
-              );
+              if (value === 'rtl') {
+                styles.direction = 'rtl';
+              }
               break;
             case 'font':
-              Object.assign(styles, DEFAULT_INLINE_STYLES.font(value, this.op));
+              if (typeof value === 'string') {
+                styles.fontFamily = value;
+              }
               break;
             case 'size':
-              Object.assign(styles, DEFAULT_INLINE_STYLES.size(value, this.op));
+              if (typeof value === 'string') {
+                styles.fontSize = value;
+              }
               break;
           }
         }

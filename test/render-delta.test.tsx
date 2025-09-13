@@ -230,7 +230,7 @@ describe('RenderDelta', () => {
 
   it('should set default inline styles when inlineStyles is true', function () {
     const hugeOps = [
-      { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
+      { insert: 'huge', attributes: { size: '18px', attr1: 'red' } },
       { insert: '\n' },
     ];
     const props: RenderDeltaProps = {
@@ -241,13 +241,13 @@ describe('RenderDelta', () => {
     };
     assert.equal(
       render(props),
-      '<p><span style="font-size:2.5em">huge</span></p>',
+      '<p><span style="font-size:18px">huge</span></p>',
     );
   });
 
   it('should set default inline styles when inlineStyles is true and custom CSS styles are applied', () => {
     const hugeOps = [
-      { insert: 'huge', attributes: { size: 'huge', attr1: 'red' } },
+      { insert: 'huge', attributes: { size: '20px', attr1: 'red' } },
       { insert: '\n' },
     ];
     const props: RenderDeltaProps = {
@@ -265,7 +265,7 @@ describe('RenderDelta', () => {
     };
     assert.equal(
       render(props),
-      '<p><span style="color:red;font-size:2.5em">huge</span></p>',
+      '<p><span style="color:red;font-size:20px">huge</span></p>',
     );
   });
 

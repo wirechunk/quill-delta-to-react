@@ -33,7 +33,7 @@ describe('RenderOp', () => {
       align: AlignType.Center,
       direction: DirectionType.Rtl,
       font: 'roman',
-      size: 'small',
+      size: '11px',
       background: 'red',
     };
 
@@ -43,7 +43,7 @@ describe('RenderOp', () => {
       textAlign: 'center',
       direction: 'rtl',
       fontFamily: 'roman',
-      fontSize: '0.75em',
+      fontSize: '11px',
     };
 
     it('should return an empty object when there are no styles', () => {
@@ -153,7 +153,6 @@ describe('RenderOp', () => {
       const ro = new RenderOp(op, { inlineStyles: {} });
       assert.deepEqual(ro.getCssStyles(), {
         direction: 'rtl',
-        textAlign: 'inherit',
       });
     });
 
@@ -195,7 +194,7 @@ describe('RenderOp', () => {
 
     it('should render default font inline styles', () => {
       const op = new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'f'), {
-        font: 'monospace',
+        font: 'Monaco, Courier New, monospace',
       });
       const ro = new RenderOp(op, { inlineStyles: {} });
       assert.deepEqual(ro.getCssStyles(), {
@@ -203,26 +202,26 @@ describe('RenderOp', () => {
       });
     });
 
-    it('should return nothing for an inline style with no mapped entry', function () {
+    it('should return nothing for an inline style function with no op with the attribute', function () {
       const ro = new RenderOp(
         new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'f'), {
-          size: 'biggest',
+          size: '36px',
         }),
         {
           inlineStyles: {
             somethingElse: () => ({
-              fontSize: '0.75em',
+              color: 'red',
             }),
           },
         },
       );
-      assert.deepEqual(ro.getCssStyles(), {});
+      assert.deepEqual(ro.getCssStyles(), { fontSize: '36px' });
     });
 
     it('should return nothing for an inline style where the custom styling function returns undefined', function () {
       const ro = new RenderOp(
         new DeltaInsertOp(new InsertDataQuill(DataType.Text, 'f'), {
-          size: 'biggest',
+          size: '36px',
         }),
         {
           inlineStyles: {
