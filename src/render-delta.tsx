@@ -47,7 +47,7 @@ export type RenderDeltaProps = {
  */
 export const RenderDelta: FunctionComponent<RenderDeltaProps> = (props) => {
   const options = useMemo<RenderDeltaOptions>(() => {
-    let inlineStyles: boolean | Partial<InlineStyles> = false;
+    let inlineStyles: false | Partial<InlineStyles> = false;
     if (props.options?.inlineStyles) {
       if (typeof props.options.inlineStyles === 'object') {
         inlineStyles = props.options.inlineStyles;
