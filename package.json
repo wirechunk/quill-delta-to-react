@@ -1,6 +1,6 @@
 {
   "name": "quill-delta-to-react",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Converts Quill's Delta ops to React",
   "publishConfig": {
     "provenance": true
